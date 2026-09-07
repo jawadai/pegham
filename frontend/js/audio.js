@@ -18,17 +18,20 @@ class AudioController {
     }
 
     try {
-      this.mediaStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          channelCount: 1,
-          sampleRate: 16000
-        }
-      });
+      try {
+        this.mediaStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+        });
+      } catch (constraintErr) {
+        console.warn("Retrying microphone with basic constraints:", constraintErr);
+        this.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
       this.isConnected = true;
-      console.log("🎙️ Microphone access granted with Acoustic Echo Cancellation.");
+      console.log("🎙️ Microphone access granted successfully.");
       return this.mediaStream;
     } catch (err) {
       console.error("Failed to acquire microphone access:", err);

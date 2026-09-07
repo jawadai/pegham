@@ -138,3 +138,4 @@ class AIService:
 
 # Global AI Service Instance
 ai_service = AIService()
+

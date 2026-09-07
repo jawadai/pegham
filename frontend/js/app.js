@@ -140,11 +140,13 @@ document.addEventListener("DOMContentLoaded", () => {
   // Start Voice Recording
   async function startRecording() {
     try {
+      setOrbState("listening");
       await window.audioController.startRecording();
       isRecordingActive = true;
-      setOrbState("listening");
+      console.log("Recording is active.");
     } catch (err) {
-      alert("Microphone permission required to use voice input.");
+      console.error("Microphone error:", err);
+      transcriptText.textContent = "Microphone error: " + (err.message || err.name || "Access denied");
       setOrbState("idle");
       isRecordingActive = false;
     }
@@ -155,15 +157,18 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!isRecordingActive) return;
     isRecordingActive = false;
     setOrbState("executing");
+    transcriptText.textContent = "Transcribing voice with Groq Whisper...";
 
     try {
       const audioBlob = await window.audioController.stopRecording();
-      if (!audioBlob || audioBlob.size < 1000) {
+      if (!audioBlob || audioBlob.size < 100) {
+        console.warn("Audio recording empty or too small:", audioBlob ? audioBlob.size : 0);
+        transcriptText.textContent = "Audio too brief. Please tap or hold spacebar, speak, then tap again.";
         setOrbState("idle");
         return;
       }
 
-      transcriptText.textContent = "Listening recognized... Thinking with LLaMA 3.3 70B...";
+      transcriptText.textContent = "Thinking with LLaMA 3.3 70B & executing WhatsApp...";
       const result = await window.audioController.processVoice(audioBlob);
 
       if (result) {
@@ -185,7 +190,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     } catch (err) {
       console.error("Error processing voice:", err);
-      transcriptText.textContent = "Error processing voice. Please try again.";
+      transcriptText.textContent = "Error processing voice: " + (err.message || "Server error");
       setOrbState("idle");
     }
   }
