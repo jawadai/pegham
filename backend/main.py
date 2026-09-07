@@ -19,7 +19,7 @@ async def lifespan(app: FastAPI):
     """
     Lifecycle manager for application startup and shutdown.
     """
-    logger.info("💌 Starting Pegham.ai Server...")
+    logger.info("📨 Starting Pegham.ai Server...")
     # Optional background initialization of services
     yield
     logger.info("Shutting down Pegham.ai Server...")

@@ -1,13 +1,10 @@
-<div align="center">
-  <img src="frontend/assets/logo.svg" width="96" height="96" alt="Pegham.ai Logo" />
-  <h1>Pegham.ai (پیغام)</h1>
-  <p><em>نیا زمانہ، نیا پیغام — The Voice-First WhatsApp Operating Copilot</em></p>
+# 📨 Pegham.ai (پیغام)
+### *نیا زمانہ، نیا پیغام — The Voice-First WhatsApp Operating Copilot*
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Framework: Pipecat](https://img.shields.io/badge/pipeline-Pipecat%20AI-purple.svg)](https://github.com/pipecat-ai/pipecat)
 [![Automation: Playwright](https://img.shields.io/badge/automation-Playwright-green.svg)](https://playwright.dev/python/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-</div>
 
 **Pegham.ai** is an open-source, real-time voice copilot that lets you control your personal WhatsApp completely hands-free using natural spoken **Urdish** (conversational Urdu + English) or pure English.
 
