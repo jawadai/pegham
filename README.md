@@ -28,6 +28,19 @@ Consumer voice assistants like ChatGPT Voice and Gemini Live are walled inside m
 
 ---
 
+## 📚 Developer & Architecture Knowledge Hub
+
+If you are a developer looking to learn from this codebase, understand the system design choices, or contribute, explore the **[Comprehensive Documentation Hub (`docs/`)](docs/README.md)**:
+
+* 🗺️ [**01. System Architecture & Lifecycle**](docs/01_system_architecture.md) — Sequence diagrams, sub-second latency budgets, and WebRTC streaming.
+* ⚖️ [**02. Technology Stack Deep Dive**](docs/02_technology_stack_deep_dive.md) — Why Pipecat over LangChain, why Playwright over Meta Cloud API, Silero VAD.
+* 🔍 [**03. Codebase Guided Tour**](docs/03_codebase_walkthrough.md) — Module-by-module walkthrough of backend, frontend, scripts, and data contracts.
+* 🌐 [**04. Playwright WhatsApp Mechanics**](docs/04_playwright_whatsapp_mechanics.md) — Persistent browser context (`user_data_dir`), QR survival, anti-bot mitigation.
+* 🎙️ [**05. Voice Agent & Prompt Engineering**](docs/05_voice_agent_and_prompt_engineering.md) — Urdish bilingual speech, conversational voice vs text, function calling schemas.
+* 🎧 [**06. Frontend & Audio Engineering**](docs/06_frontend_and_audio_engineering.md) — Hardware Acoustic Echo Cancellation (AEC), 16kHz sampling, push-to-talk, CSS Orb.
+
+---
+
 ## 🏗️ Architecture & Data Flow
 
 ```text
