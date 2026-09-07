@@ -91,7 +91,10 @@ async def setup_whatsapp_session():
         else:
             logger.error("Login timed out after 3 minutes. Please ensure your phone is connected to the internet and re-run.")
 
-    await context.close()
+    try:
+        await context.close()
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":
