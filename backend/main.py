@@ -33,8 +33,9 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Static and Frontend directory paths
+# Static, Frontend, and Documentation directory paths
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
+DOCS_DIR = Path(__file__).parent.parent / "docs"
 
 
 @app.get("/api/health")
@@ -72,6 +73,15 @@ async def serve_index():
     if index_file.exists():
         return FileResponse(index_file)
     return {"message": "Pegham.ai API is running. Frontend index.html not found."}
+
+
+# Serve interactive documentation portal at /guide
+@app.get("/guide")
+async def serve_guide():
+    guide_file = DOCS_DIR / "index.html"
+    if guide_file.exists():
+        return FileResponse(guide_file)
+    return {"message": "Documentation guide not found. Run python scripts/build_docs_html.py"}
 
 # Mount static assets if frontend directory exists
 if FRONTEND_DIR.exists():

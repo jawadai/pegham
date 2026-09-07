@@ -54,10 +54,18 @@
       </div>
     </div>
     
-    <!-- WhatsApp Connection Status Badge -->
-    <div id="whatsapp-badge" class="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs font-medium">
-      <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse" id="status-dot"></span>
-      <span id="status-text" class="text-slate-300">Checking WhatsApp...</span>
+    <div class="flex items-center space-x-2.5">
+      <!-- Interactive Docs Link -->
+      <a href="/guide" target="_blank" title="Open Interactive Developer Docs" class="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-full bg-slate-900/80 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-xs font-medium text-slate-300 hover:text-white transition">
+        <span>📖</span>
+        <span class="hidden sm:inline">Docs</span>
+      </a>
+
+      <!-- WhatsApp Connection Status Badge -->
+      <div id="whatsapp-badge" class="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs font-medium">
+        <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse" id="status-dot"></span>
+        <span id="status-text" class="text-slate-300">Checking WhatsApp...</span>
+      </div>
     </div>
   </header>
 

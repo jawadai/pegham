@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pegham.ai — Architecture & Developer Documentation</title>
+  
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📨</text></svg>">
+  
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet">
+  
+  <!-- Marked.js for High Performance Markdown Parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  
+  <!-- Prism.js for Syntax Highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+            urdu: ['Noto Nastaliq Urdu', 'serif']
+          },
+          colors: {
+            darkbg: '#0a0d14',
+            darksidebar: '#0d111a',
+            darkcard: '#121722',
+            bordercolor: '#1e2638',
+            primary: '#10b981',
+            accent: '#f59e0b',
+            accentcoral: '#f43f5e'
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0a0d14;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e2638;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+
+    /* Markdown Typography Styling */
+    .prose-pegham h1 {
+      font-size: 1.85rem;
+      font-weight: 800;
+      color: #f8fafc;
+      margin-top: 1rem;
+      margin-bottom: 1.2rem;
+      letter-spacing: -0.025em;
+      border-bottom: 1px solid #1e2638;
+      padding-bottom: 0.6rem;
+    }
+    .prose-pegham h2 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      margin-top: 2rem;
+      margin-bottom: 0.8rem;
+      letter-spacing: -0.02em;
+    }
+    .prose-pegham h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: #cbd5e1;
+      margin-top: 1.4rem;
+      margin-bottom: 0.5rem;
+    }
+    .prose-pegham p {
+      color: #94a3b8;
+      line-height: 1.7;
+      margin-bottom: 1rem;
+      font-size: 0.95rem;
+    }
+    .prose-pegham ul, .prose-pegham ol {
+      margin-left: 1.25rem;
+      margin-bottom: 1rem;
+      color: #94a3b8;
+    }
+    .prose-pegham ul { list-style-type: disc; }
+    .prose-pegham ol { list-style-type: decimal; }
+    .prose-pegham li {
+      margin-bottom: 0.35rem;
+      line-height: 1.6;
+    }
+    .prose-pegham a {
+      color: #38bdf8;
+      text-decoration: none;
+      border-bottom: 1px dashed #0284c7;
+      transition: all 0.2s;
+    }
+    .prose-pegham a:hover {
+      color: #7dd3fc;
+      border-bottom-style: solid;
+    }
+    .prose-pegham blockquote {
+      border-left: 3px solid #f59e0b;
+      background: rgba(245, 158, 11, 0.06);
+      padding: 0.75rem 1rem;
+      border-radius: 0 0.5rem 0.5rem 0;
+      margin: 1.2rem 0;
+      color: #e2e8f0;
+    }
+    .prose-pegham table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5rem 0;
+      font-size: 0.88rem;
+      border-radius: 0.5rem;
+      overflow: hidden;
+      border: 1px solid #1e2638;
+    }
+    .prose-pegham th {
+      background: #121722;
+      color: #f1f5f9;
+      padding: 0.65rem 0.9rem;
+      text-align: left;
+      font-weight: 600;
+      border-bottom: 1px solid #1e2638;
+    }
+    .prose-pegham td {
+      padding: 0.6rem 0.9rem;
+      border-bottom: 1px solid #171d2b;
+      color: #cbd5e1;
+    }
+    .prose-pegham tr:last-child td {
+      border-bottom: none;
+    }
+    .prose-pegham tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .prose-pegham code:not(pre code) {
+      background: #161c28;
+      color: #fbbf24;
+      padding: 0.15rem 0.35rem;
+      border-radius: 0.25rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85em;
+      border: 1px solid #232b3d;
+    }
+    .prose-pegham pre {
+      background: #0f141f !important;
+      border: 1px solid #1e2638;
+      border-radius: 0.75rem;
+      padding: 1rem;
+      margin: 1.2rem 0;
+      overflow-x: auto;
+    }
+    .prose-pegham pre code {
+      font-family: 'JetBrains Mono', monospace !important;
+      font-size: 0.86rem;
+      line-height: 1.6;
+    }
+    .prose-pegham hr {
+      border: none;
+      border-top: 1px solid #1e2638;
+      margin: 2rem 0;
+    }
+  </style>
+</head>
+<body class="bg-darkbg text-slate-100 min-h-screen flex flex-col font-sans selection:bg-amber-500 selection:text-slate-900">
+
+  <!-- Top Navigation Bar -->
+  <header class="h-16 border-b border-bordercolor bg-darksidebar/90 backdrop-blur sticky top-0 z-40 px-6 flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+      <span class="text-2xl select-none">📨</span>
+      <div class="flex items-center space-x-2">
+        <a href="/" class="font-bold text-base tracking-tight flex items-center gap-1.5 hover:opacity-90 transition">
+          <span class="bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400 bg-clip-text text-transparent font-extrabold">Pegham</span><span class="text-slate-300 font-semibold">.ai</span>
+        </a>
+        <span class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-amber-400 font-medium border border-slate-700">Docs Portal</span>
+      </div>
+    </div>
+
+    <!-- Quick Search & Actions -->
+    <div class="flex items-center space-x-3">
+      <div class="relative hidden sm:block w-64">
+        <input id="search-input" type="text" placeholder="Search documentation... (⌘K)" class="w-full bg-darkcard border border-bordercolor rounded-lg px-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500/60 transition">
+        <kbd class="absolute right-2.5 top-1.5 text-[10px] bg-slate-800 text-slate-400 px-1 py-0.5 rounded border border-slate-700">/</kbd>
+      </div>
+      <a href="/" class="text-xs text-slate-400 hover:text-white px-3 py-1.5 rounded-lg bg-slate-900/60 border border-slate-800 transition flex items-center gap-1.5">
+        <span>🎙️ Open App</span>
+      </a>
+      <a href="https://github.com/jawadai/Pegham" target="_blank" rel="noreferrer" class="text-xs text-slate-400 hover:text-white px-3 py-1.5 rounded-lg bg-slate-900/60 border border-slate-800 transition">
+        GitHub
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <div class="flex-1 flex max-w-7xl w-full mx-auto">
+
+    <!-- Left Sidebar / Tab List -->
+    <aside class="w-72 border-r border-bordercolor bg-darksidebar/50 p-4 shrink-0 hidden md:block overflow-y-auto max-h-[calc(100vh-4rem)] sticky top-16">
+      <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2 px-2">Table of Contents</p>
+      <nav id="sidebar-nav" class="space-y-1">
+        <!-- Rendered by JS -->
+      </nav>
+
+      <div class="mt-8 p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 text-xs text-slate-400">
+        <p class="font-semibold text-slate-200 mb-1">💡 Developer Note</p>
+        <p class="text-[11px] leading-relaxed">This interactive docs portal works 100% offline and standalone directly from your disk.</p>
+      </div>
+    </aside>
+
+    <!-- Content Viewport -->
+    <main class="flex-1 p-6 md:p-10 max-w-4xl overflow-x-hidden">
+      
+      <!-- Chapter Header Card -->
+      <div id="chapter-header" class="mb-6 p-5 rounded-2xl bg-darkcard border border-bordercolor flex items-center justify-between">
+        <div class="flex items-center space-x-3.5">
+          <span id="chapter-icon" class="text-3xl p-2.5 rounded-xl bg-slate-900 border border-slate-800">📖</span>
+          <div>
+            <span id="chapter-badge" class="text-[10px] font-semibold uppercase tracking-wider text-amber-400">Chapter 00</span>
+            <h2 id="chapter-title" class="text-xl font-bold text-white tracking-tight">Overview & Curriculum</h2>
+            <p id="chapter-desc" class="text-xs text-slate-400 mt-0.5">Architectural philosophy & roadmap</p>
+          </div>
+        </div>
+        <div class="hidden sm:flex items-center space-x-2">
+          <button id="copy-markdown-btn" onclick="copyCurrentContent()" class="text-xs text-slate-400 hover:text-white px-2.5 py-1 rounded bg-slate-900 border border-slate-800 transition flex items-center gap-1">
+            <span>📋 Copy Markdown</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Rendered Markdown Content Container -->
+      <article id="doc-content" class="prose-pegham">
+        <!-- Markdown injected here -->
+      </article>
+
+      <!-- Bottom Pager Navigation -->
+      <div class="mt-12 pt-6 border-t border-bordercolor flex items-center justify-between">
+        <button id="prev-btn" onclick="navigateChapter(-1)" class="px-4 py-2 rounded-xl bg-darkcard border border-bordercolor text-xs font-medium text-slate-300 hover:text-white hover:border-slate-700 transition flex items-center gap-2">
+          <span>← Previous</span>
+        </button>
+        <button id="next-btn" onclick="navigateChapter(1)" class="px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs font-semibold text-amber-400 hover:bg-amber-500/20 transition flex items-center gap-2">
+          <span>Next Chapter →</span>
+        </button>
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    const chapters = [{"id": "overview", "title": "Overview & Curriculum", "icon": "\ud83d\udcd6", "desc": "Architectural philosophy, four core pillars & roadmap", "content": "# \ud83d\udcda Pegham.ai Developer & Architecture Knowledge Hub\n\nWelcome to the definitive architectural, engineering, and system design guide for **Pegham.ai (\u067e\u06cc\u063a\u0627\u0645)**.\n\nWhether you are onboarding as a contributor, reviewing the codebase for security and privacy, or using this project as a case study to learn modern **Voice AI Pipelines**, **WebRTC Audio Engineering**, and **Headless Browser Automation**, this documentation is built to be your comprehensive source of truth.\n\n---\n\n## \ud83e\udded Core Architectural Philosophy\n\nModern consumer voice assistants (such as ChatGPT Voice, Siri, Google Gemini Live) are sandboxed inside mobile and cloud operating systems. By design:\n* \u274c They cannot inspect, search, or trigger actions within your personal WhatsApp account.\n* \u274c They cannot automate un-API'd desktop workflows without costly enterprise SaaS intermediaries.\n* \u274c The official Meta WhatsApp Business Cloud API requires formal business verification, credit card billing per conversation, rigid template approvals, and prohibits personal WhatsApp account binding.\n\n**Pegham.ai was architected to solve this problem entirely on the user's local machine:**\n\n```text\n                                  +---------------------------------------+\n                                  |           User Spoken Audio           |\n                                  +-------------------\u252c-------------------+\n                                                      \u2502 Spoken Voice\n                                                      \u25bc\n+\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500+\n|                                      Pegham.ai Local Machine Engine                                     |\n|                                                                                                         |\n|   1. Audio Ingestion    \u2500\u2500>  2. Real-Time VAD   \u2500\u2500>  3. Low-Latency STT \u2500\u2500>  4. Conversational LLM     |\n|      (WebRTC + AEC)          (Silero VAD)            (Groq Whisper)          (Tool Dispatcher)          |\n|                                                                                      \u2502                  |\n|                                                                                      \u25bc                  |\n|   7. Audio Playback     <\u2500\u2500  6. Speech Synthesis <\u2500\u2500 5. Action Execution <\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518                  |\n|      (Streamed to User)      (Azure ur-PK TTS)       (Playwright Local WhatsApp)                        |\n+\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500+\n```\n\n### The 4 Core Architectural Pillars\n\n1. **\ud83d\udd12 Zero-Cloud Privacy & Local Persistence**\n   All authentication state (session cookies, IndexedDB crypto tokens, WhatsApp keys) lives strictly inside `./whatsapp_session` on your local SSD. No database, no third-party telemetry, no cloud relays.\n2. **\u26a1 Sub-Second Voice Turnaround (Low Latency)**\n   To feel conversational, response latency must stay below **800ms**. Pegham achieves this by utilizing **streaming audio frames**, ultra-fast Whisper inference via Groq, and parallel tool dispatching.\n3. **\ud83d\udde3\ufe0f Native Urdish & Code-Switching Comprehension**\n   Real human speech in South Asia is rarely purely standard English or formal Urdu. Pegham is explicitly prompt-engineered to understand Roman Urdu, Pakistani colloquial idioms (*\"Bhai ko bolo\"*, *\"Eid Mubarak bol do\"*), and phonetic transcriptions without hallucination.\n4. **\ud83c\udf10 Zero-Dependency Playwright Automation**\n   Rather than relying on fragile reverse-engineered WhatsApp Web wrappers that get banned, Pegham controls an authentic Chromium instance via Playwright with anti-detection flags enabled.\n\n---\n\n## \ud83d\udcd6 Curriculum Roadmap & Reading Order\n\nFor any developer studying this repository, we recommend reading through the documentation in the following structured sequence:\n\n| Chapter | Document | What You Will Learn |\n| :---: | :--- | :--- |\n| **01** | [**System Architecture & Data Flow**](01_system_architecture.md) | The complete end-to-end lifecycle of a voice command, sequence diagrams, latency budgeting, and component interactions. |\n| **02** | [**Technology Stack Deep Dive**](02_technology_stack_deep_dive.md) | Technical rationale for every library and tool chosen (Pipecat, Playwright, Silero, Whisper, FastAPI, Loguru) vs. alternative approaches. |\n| **03** | [**Codebase Walkthrough**](03_codebase_walkthrough.md) | File-by-file guided tour of the directory tree, explaining the purpose, functions, and data contracts of every module. |\n| **04** | [**WhatsApp Automation Mechanics**](04_playwright_whatsapp_mechanics.md) | How Chromium persistent contexts (`user_data_dir`) work, DOM query strategies, QR code login preservation, and anti-bot mitigation. |\n| **05** | [**Voice Agent & Prompt Engineering**](05_voice_agent_and_prompt_engineering.md) | Designing prompts for conversational voice vs. chat, Urdish bilingual understanding, structured JSON tool schemas, and output guardrails. |\n| **06** | [**Frontend & Audio Engineering**](06_frontend_and_audio_engineering.md) | WebRTC audio constraints, Acoustic Echo Cancellation (AEC), hardware sampling (16kHz), push-to-talk, and reactive CSS Orb animation states. |\n\n---\n\n## \ud83d\udd11 Key Engineering Glossary\n\n* **AEC (Acoustic Echo Cancellation):** Browser/hardware algorithm that subtracts the speaker audio from the microphone input, preventing the AI voice from feeding back into itself.\n* **VAD (Voice Activity Detection):** Machine learning model (e.g. Silero VAD) that analyzes raw audio chunks to detect human speech boundaries, speech onset, and thinking pauses.\n* **STT (Speech-to-Text):** Converting raw audio frames into text transcripts (e.g. OpenAI Whisper Large-v3 running on Groq LPU hardware).\n* **TTS (Text-to-Speech):** Synthesizing text into natural-sounding audio streams (e.g. Azure Neural Speech with `ur-PK` voice models).\n* **Persistent Browser Context:** A Playwright Chromium session configured with an on-disk profile directory (`user_data_dir`), preserving cookies, local storage, and IndexedDB between process restarts.\n* **Urdish:** Colloquial code-switching between Urdu and English common across Pakistan and the South Asian diaspora (e.g., *\"Meeting cancel ho gayi hai\"*).\n* **Barge-In:** The capability of a real-time voice pipeline to immediately cancel TTS playback and tool execution when the user starts speaking over the bot.\n"}, {"id": "architecture", "title": "System Architecture", "icon": "\ud83d\uddfa\ufe0f", "desc": "End-to-end topology, sequence diagrams & 800ms latency budget", "content": "# 01 \u2014 System Architecture & Data Flow\n\nThis document details the architectural topology, data pipelines, event loops, and latency budgets that allow **Pegham.ai** to deliver sub-second, voice-driven WhatsApp automation.\n\n---\n\n## \ud83c\udfdb\ufe0f System Topology Diagram\n\nPegham.ai operates on a client-server architecture hosted locally on the user's workstation. The diagram below illustrates the components and their boundaries:\n\n```mermaid\ngraph TB\n    subgraph Client [\"Client Tier (Browser UI)\"]\n        MIC[\"Microphone Capture<br/>(16kHz, Mono, AEC enabled)\"]\n        ORB[\"Glowing Command Orb UI<br/>(State: Idle, Listening, Speaking)\"]\n        CARD[\"Action Card Component<br/>(Real-time WhatsApp Status)\"]\n        SPK[\"Speaker Playback<br/>(WebRTC / WebAudio Stream)\"]\n    end\n\n    subgraph Backend [\"Pegham Backend Server (FastAPI + Asyncio)\"]\n        WS_HUB[\"WebSocket Event Bus<br/>(/ws/events)\"]\n        STATIC[\"Static Asset Server<br/>(Mounts /static)\"]\n        HEALTH[\"Health API Endpoint<br/>(/api/health)\"]\n\n        subgraph Core [\"Pipecat Real-Time Pipeline\"]\n            TRANSPORT_IN[\"WebRTC / Audio Transport In\"]\n            VAD[\"Silero VAD<br/>(Detects Speech Start/Stop)\"]\n            STT[\"Whisper Large-v3 (Groq)<br/>(Speech-to-Text Transcription)\"]\n            LLM[\"Conversational Brain (GPT-4o/Claude)<br/>(Intent Extraction & Tool Calling)\"]\n            TTS[\"Neural TTS (Azure ur-PK / ElevenLabs)<br/>(Text-to-Speech Audio Generation)\"]\n            TRANSPORT_OUT[\"WebRTC Audio Transport Out\"]\n        end\n\n        subgraph Service [\"Automation Services\"]\n            DISPATCH[\"Tool Dispatcher<br/>(backend/core/tools.py)\"]\n            PW_SRV[\"Playwright WhatsApp Service<br/>(backend/services/whatsapp.py)\"]\n        end\n    end\n\n    subgraph OS [\"Operating System & Persistence\"]\n        SESSION_DIR[\"Local Session Directory<br/>(./whatsapp_session)\"]\n        CHROME[\"Headless Chromium Process<br/>(web.whatsapp.com)\"]\n    end\n\n    %% Audio & Control Connections\n    MIC -->|WebRTC Audio Frames| TRANSPORT_IN\n    TRANSPORT_IN --> VAD\n    VAD -->|Voice Frames| STT\n    STT -->|User Transcript Text| LLM\n    LLM -->|Function Call Payload| DISPATCH\n    DISPATCH -->|Async Task| PW_SRV\n    PW_SRV <-->|DevTools Protocol / CDP| CHROME\n    CHROME <-->|Read / Write Cookies & IndexedDB| SESSION_DIR\n    PW_SRV -->|Action Status Event| WS_HUB\n    WS_HUB -->|JSON Events| CARD\n    WS_HUB -->|Orb State Sync| ORB\n    LLM -->|Spoken Response Text| TTS\n    TTS -->|Synthesized Audio Stream| TRANSPORT_OUT\n    TRANSPORT_OUT -->|WebRTC Audio Stream| SPK\n```\n\n---\n\n## \ud83d\udd04 End-to-End Voice-to-Action Lifecycle\n\nWhen a user says: *\"Hamza ko WhatsApp pe bolo main 10 min mein pohanch raha hoon\"*, the system executes the following chronological sequence:\n\n```mermaid\nsequenceDiagram\n    autonumber\n    actor User as User (Voice)\n    participant UI as Browser (Command Orb)\n    participant Pipe as Pipecat Audio Engine\n    participant Groq as Groq (Whisper STT)\n    participant LLM as Conversational LLM\n    participant Tools as Tool Dispatcher\n    participant WA as Playwright WhatsApp\n    participant TTS as Azure Neural TTS\n\n    User->>UI: Speaks voice command\n    UI->>Pipe: WebRTC streaming audio chunks (16kHz PCM)\n    Note over Pipe: Silero VAD detects speech onset.<br/>Orb transitions to LISTENING state.\n    Pipe->>Groq: Stream audio frames for inference\n    Groq-->>Pipe: Return text: \"Hamza ko WhatsApp pe bolo main 10 min mein pohanch raha hoon\"\n    Pipe->>UI: Emit WS event: TRANSCRIPT\n    UI-->>User: Render transcript text in real time\n\n    Note over Pipe: Silero VAD detects end-of-speech silence (~400ms).\n    Pipe->>LLM: Send conversation context + Urdish System Prompt + Tool Schema\n    \n    Note over LLM: LLM determines function call:<br/>send_whatsapp_message(contact=\"Hamza\", message=\"main 10 min mein pohanch raha hoon\")\n    \n    par Parallel Execution\n        LLM->>Tools: Dispatch send_whatsapp_message\n        Tools->>WA: Locate contact 'Hamza' & submit message\n        WA-->>UI: Emit WS event: WHATSAPP_ACTION (Status: Sent)\n        UI-->>User: Action Card slides open with recipient & text\n    and\n        LLM->>TTS: Stream response text: \"Hamza ko message bhej diya hai!\"\n        TTS-->>Pipe: Stream synthesized PCM audio frames\n        Pipe->>UI: Stream WebRTC audio response\n        UI->>User: Spoken confirmation through speakers\n    end\n```\n\n---\n\n## \u23f1\ufe0f The 800ms Latency Budget\n\nIn voice user interfaces (VUI), human conversational psychology dictates that **any response taking longer than 1,000ms creates an awkward, robotic pause**.\n\nPegham targets an **end-to-end turnaround latency under 800ms**. Here is how the latency budget is partitioned:\n\n| Processing Stage | Target Latency | Optimization Technique |\n| :--- | :---: | :--- |\n| **1. Audio Ingestion & Transport** | $\\approx 20\\text{ms}$ | Browser WebRTC Opus stream over local `localhost` network. |\n| **2. Voice Activity Detection (VAD)** | $\\approx 350\\text{ms}$ | Silero VAD chunking. Requires ~350\u2013400ms of consecutive silence to confirm user finished speaking without cutting off thought pauses. |\n| **3. Speech-to-Text (STT)** | $\\approx 150\\text{ms}$ | Whisper Large-v3 running on Groq LPUs (capable of 300+ words per second transcription). |\n| **4. LLM Time to First Token (TTFT)** | $\\approx 200\\text{ms}$ | Streaming completion using low-latency reasoning models with zero pre-prompt fluff. |\n| **5. Text-to-Speech First Chunk** | $\\approx 100\\text{ms}$ | Azure Neural TTS streaming endpoint emitting chunked audio frames as tokens arrive. |\n| **Total Turnaround to Voice Output** | **$\\approx 820\\text{ms}$** | **Sub-second, human-like voice response.** |\n\n> [!NOTE]\n> The WhatsApp Playwright automation executes **concurrently** with the audio response synthesis. The user hears the spoken confirmation *\"Hamza ko message bhej diya hai\"* at the exact instant the browser DOM action finishes submitting the message.\n\n---\n\n## \ud83d\udea6 Frontend State Synchronization Machine\n\nThe Command Orb in `frontend/js/app.js` is driven by a finite state machine synchronized over WebSockets:\n\n```mermaid\nstateDiagram-v2\n    [*] --> Idle: Page Load & WS Connected\n    Idle --> Listening: Mic Input Active / Spacebar Down\n    Listening --> Executing: VAD Silence Confirmed / Tool Dispatched\n    Executing --> Speaking: TTS Stream Arriving\n    Speaking --> Idle: TTS Stream Finished\n    Listening --> Idle: User Interruption / Silence Timeout\n```\n\n1. **`orb-idle` (Emerald Green):** System is ready and waiting for microphone activation.\n2. **`orb-listening` (Electric Indigo Pulse):** Silero VAD detects active speech; pulse expands with user's voice cadence.\n3. **`orb-executing` (Amber Glow):** WhatsApp automation is clicking contacts and typing text in Chromium.\n4. **`orb-speaking` (Teal-Blue Wave):** The assistant is actively speaking confirmation back to the user.\n"}, {"id": "tech-stack", "title": "Technology Stack Deep Dive", "icon": "\u2696\ufe0f", "desc": "Pipecat vs LangChain, Playwright vs Meta API & trade-offs", "content": "# 02 \u2014 Technology Stack Deep Dive & Trade-offs\n\nEvery library and dependency in **Pegham.ai** was selected after rigorous benchmarking against architectural alternatives. This document records the engineering decisions, performance trade-offs, and technical rationales behind our choices.\n\n---\n\n## \u2696\ufe0f Technology Comparison Matrix\n\n| Problem Space | Selected Tool | Evaluated Alternatives | Decisive Technical Advantage |\n| :--- | :--- | :--- | :--- |\n| **Browser Automation** | **Playwright** (Python Async) | Selenium, Puppeteer, Baileys, Meta Cloud API | First-class `launch_persistent_context` support, robust auto-waiting, native Chromium DevTools Protocol (CDP) binding, Python `asyncio` integration. |\n| **Voice Orchestration** | **Pipecat AI** | LangChain, LlamaIndex, Custom asyncio loops | Frame-based streaming architecture designed specifically for full-duplex voice, native barge-in handling, and WebRTC audio transport. |\n| **Voice Detection (VAD)** | **Silero VAD** | WebRTC VAD, RMS Energy Thresholding | Deep neural network running on ONNX with high speech discrimination; does not trigger on coughs, typing, or background room noise. |\n| **Speech-to-Text (STT)** | **Groq (Whisper Large-v3)** | OpenAI Whisper API, Local Whisper.cpp | Sub-150ms transcription latency enabled by Groq's Tensor Streaming Processing (LPU), critical for conversation pacing. |\n| **Text-to-Speech (TTS)** | **Azure Neural Speech** | ElevenLabs, OpenAI TTS, Google Cloud TTS | Native, culturally authentic Pakistani Urdu (`ur-PK-AsadNeural` / `ur-PK-UzmaNeural`) models with low streaming first-byte latency. |\n| **Application Server** | **FastAPI** | Flask, Django, Tornado | Native asynchronous ASGI core, high-concurrency WebSocket channels, seamless Pydantic V2 settings schema validation. |\n| **Logging & Diagnostics** | **Loguru** | Standard Python `logging` | Zero-configuration structured colored output, automatic async-safe thread-safety, and intuitive call-site inspection. |\n\n---\n\n## \ud83d\udd0d Detailed Component Rationales\n\n### 1. Browser Automation: Playwright vs. The Alternatives\n\nA central design requirement of Pegham is controlling WhatsApp Web **without getting the user's account banned and without paying recurring enterprise SaaS fees**.\n\n#### Why Not the Official Meta WhatsApp Cloud API?\n* **Rigid Business Verification:** Meta requires government business licenses, tax documents, and credit card verification.\n* **Prohibitive Pay-Per-Conversation Billing:** Meta charges between $\\$0.03$ and $\\$0.08$ per 24-hour conversation window.\n* **Personal Account Incompatibility:** The Cloud API **cannot** bind to a personal WhatsApp phone number. It forces the creation of a separate business identity.\n* **Template Restrictions:** Initiating messages outside a 24-hour customer service window requires pre-approved, inflexible message templates.\n\n#### Why Not Reverse-Engineered Libraries (`whatsapp-web.js` / `Baileys`)?\n* These libraries reverse-engineer WhatsApp's proprietary WebSocket protocol. Meta continuously deploys protocol countermeasures, leading to **frequent account bans** and code breakage whenever WhatsApp Web updates its bundle.\n\n#### Why Playwright?\n* **Authentic Browser Fingerprint:** Playwright operates genuine Google Chromium with legitimate hardware rendering, canvas profiles, and networking headers.\n* **Persistent Browser Context:**\n  ```python\n  context = await playwright.chromium.launch_persistent_context(\n      user_data_dir=\"./whatsapp_session\",\n      headless=False\n  )\n  ```\n  This single API call saves session cookies, localStorage, IndexedDB tables, and encryption keys directly to disk. Once the user scans the QR code once, WhatsApp Web remains authenticated indefinitely.\n* **Auto-Waiting Locators:** Playwright automatically waits for elements to be visible, enabled, and stable before attempting to click or type, eliminating brittle `sleep()` statements.\n\n---\n\n### 2. Voice Pipeline: Pipecat vs. LangChain\n\nMany developers reflexively reach for LangChain or LlamaIndex when building LLM applications. For **real-time voice**, this approach fails fundamentally.\n\n#### The Fundamental Flaw of Request-Response Chains\nTraditional LLM frameworks operate on a batch request-response model:\n1. Wait for user to completely finish speaking.\n2. Send the entire audio to STT $\\rightarrow$ receive complete text.\n3. Send full text to LLM $\\rightarrow$ wait for full text generation.\n4. Send full text to TTS $\\rightarrow$ wait for audio buffer to complete.\n5. Play full audio buffer back to the user.\n\nThis serial chain introduces **$2.5$ to $4.0$ seconds of dead silence**, making conversational interaction feel broken and unnatural.\n\n#### The Pipecat Streaming Frame Model\nPipecat is built on a **directed acyclic graph (DAG) of streaming frame processors**:\n```text\n[AudioInFrame] \u2500\u2500> [VADProcessor] \u2500\u2500> [STTProcessor] \u2500\u2500> [LLMProcessor] \u2500\u2500> [TTSProcessor] \u2500\u2500> [AudioOutFrame]\n```\n* **Frame-by-Frame Streaming:** Audio chunks ($20\\text{ms}$ buffers) flow through processors continuously.\n* **First-Token Synthesis:** As soon as the LLM generates its first 3 words, they are immediately piped to TTS and audio playback begins while the LLM is still generating the rest of the sentence.\n* **Native Barge-In:** If the user speaks while the assistant is talking, the VAD emits an `InterruptionFrame` that travels down the pipeline, instantly cancelling the TTS stream and clearing audio output buffers.\n\n---\n\n### 3. Speech Recognition: Groq Whisper-Large-v3\n\nWhile OpenAI provides an official Whisper API, its typical response latency ranges between **$600\\text{ms}$ and $1,200\\text{ms}$** because requests queue on shared GPU clusters.\n\nBy utilizing **Groq's LPU (Language Processing Unit)** infrastructure:\n* Whisper Large-v3 processes audio at over **$300\\times$ real-time speed**.\n* A 3-second spoken sentence is transcribed in under **$120\\text{ms}$**.\n* Accuracy on accented Pakistani English and Roman Urdu phonetic vocabulary remains identical to the base Whisper Large-v3 model.\n\n---\n\n### 4. Speech Synthesis: Azure Neural TTS (`ur-PK`)\n\nMost modern TTS engines (such as ElevenLabs or OpenAI TTS) excel at American and British English, but sound robotic, heavily accented, or entirely unintelligible when speaking Urdu phrases.\n\nMicrosoft Azure Speech Services maintains dedicated regional neural voice models:\n* `ur-PK-AsadNeural` (Male, natural conversational Pakistani Urdu)\n* `ur-PK-UzmaNeural` (Female, natural conversational Pakistani Urdu)\n\nThese voice models accurately synthesize Urdu phonemes (retroflex consonants like *\u0679*, *\u0688*, *\u0691*) and correctly pronounce mixed Urdish phrases (e.g. *\"Meeting scheduled kar di gayi hai\"*).\n"}, {"id": "codebase", "title": "Codebase Guided Tour", "icon": "\ud83d\udd0d", "desc": "Module-by-module breakdown & WebSocket event contracts", "content": "# 03 \u2014 Codebase Guided Tour & Data Contracts\n\nThis document provides a line-level and module-level walkthrough of the entire Pegham.ai repository. Use this to understand how control flows through the codebase and how data structures are passed between layers.\n\n---\n\n## \ud83d\uddc2\ufe0f Complete Directory Layout\n\n```text\nPegham/\n\u251c\u2500\u2500 README.md                     # Public documentation and quickstart\n\u251c\u2500\u2500 pyproject.toml                # Standard PEP 517/621 packaging metadata\n\u251c\u2500\u2500 requirements.txt              # Pinned production Python dependencies\n\u251c\u2500\u2500 .env.example                  # Environment configuration template\n\u251c\u2500\u2500 .gitignore                    # Prevents leaking ./whatsapp_session and secrets\n\u2502\n\u251c\u2500\u2500 backend/                      # Python Async Backend Core\n\u2502   \u251c\u2500\u2500 __init__.py               # Package metadata (__version__ = \"0.1.0\")\n\u2502   \u251c\u2500\u2500 main.py                   # FastAPI server, WebSockets, static file server\n\u2502   \u251c\u2500\u2500 config.py                 # Pydantic V2 settings and path resolver\n\u2502   \u2502\n\u2502   \u251c\u2500\u2500 core/                     # Voice AI Pipeline & Intelligence\n\u2502   \u2502   \u251c\u2500\u2500 __init__.py\n\u2502   \u2502   \u251c\u2500\u2500 pipecat_pipeline.py   # Pipecat DAG pipeline builder\n\u2502   \u2502   \u251c\u2500\u2500 prompts.py            # Urdish system prompt & voice personality\n\u2502   \u2502   \u2514\u2500\u2500 tools.py              # LLM function calling schemas and execution dispatcher\n\u2502   \u2502\n\u2502   \u251c\u2500\u2500 services/                 # Hardware & Browser Automation Services\n\u2502   \u2502   \u251c\u2500\u2500 __init__.py\n\u2502   \u2502   \u2514\u2500\u2500 whatsapp.py           # Playwright Chromium persistent automation engine\n\u2502   \u2502\n\u2502   \u2514\u2500\u2500 utils/                    # Shared Utilities\n\u2502       \u251c\u2500\u2500 __init__.py\n\u2502       \u2514\u2500\u2500 logger.py             # Loguru structured logging configuration\n\u2502\n\u251c\u2500\u2500 frontend/                     # Modern Web Client (The \"Command Orb\")\n\u2502   \u251c\u2500\u2500 index.html                # Single-page UI with Tailwind CSS\n\u2502   \u251c\u2500\u2500 css/\n\u2502   \u2502   \u2514\u2500\u2500 style.css             # Keyframe animations for Voice Orb states\n\u2502   \u2514\u2500\u2500 js/\n\u2502       \u251c\u2500\u2500 app.js                # State machine, WebSocket handler, push-to-talk\n\u2502       \u2514\u2500\u2500 audio.js              # Hardware microphone capture with AEC\n\u2502\n\u251c\u2500\u2500 docs/                         # Developer & Architecture Knowledge Hub\n\u2502   \u251c\u2500\u2500 README.md\n\u2502   \u251c\u2500\u2500 01_system_architecture.md\n\u2502   \u251c\u2500\u2500 02_technology_stack_deep_dive.md\n\u2502   \u251c\u2500\u2500 03_codebase_walkthrough.md\n\u2502   \u251c\u2500\u2500 04_playwright_whatsapp_mechanics.md\n\u2502   \u251c\u2500\u2500 05_voice_agent_and_prompt_engineering.md\n\u2502   \u2514\u2500\u2500 06_frontend_and_audio_engineering.md\n\u2502\n\u2514\u2500\u2500 scripts/                      # Developer CLI Utilities\n    \u251c\u2500\u2500 setup_whatsapp.py         # One-time QR code authenticator\n    \u2514\u2500\u2500 test_whatsapp.py          # Standalone headless message test script\n```\n\n---\n\n## \ud83d\udd2c Backend Module Walkthrough\n\n### 1. `backend/config.py` \u2014 Settings & Path Resolution\nUses **Pydantic Settings** (`pydantic_settings.BaseSettings`) to load and validate environment variables with type safety:\n* **Server Settings:** `HOST` (`0.0.0.0`), `PORT` (`8000`), `DEBUG` (`bool`).\n* **Credentials:** `OPENAI_API_KEY`, `GROQ_API_KEY`, `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION`.\n* **Automation Parameters:** `WHATSAPP_SESSION_DIR` (`./whatsapp_session`), `WHATSAPP_HEADLESS` (`bool`).\n* **`session_path` Property:** Dynamically resolves the session directory into an absolute `pathlib.Path` and ensures it exists via `mkdir(parents=True, exist_ok=True)`.\n\n### 2. `backend/main.py` \u2014 Application Entrypoint & Event Hub\n* **`lifespan` Context Manager:** FastAPI modern lifecycle handler. Initializes services on boot and guarantees graceful cleanup (closing the Playwright browser context) on server shutdown.\n* **`GET /api/health`:** Lightweight status probe returning `{\"status\": \"healthy\", \"app\": \"Pegham.ai\", \"whatsapp_ready\": bool}`. The frontend polls this on connect.\n* **`WebSocket /ws/events`:** Real-time bi-directional channel streaming event envelopes between the Python backend and the browser interface.\n* **Static File Mount:** Mounts the `frontend/` folder to `/static`, serving HTML, CSS, and JS to the browser.\n\n### 3. `backend/core/prompts.py` \u2014 Voice Personality & Guardrails\nContains `PEGHAM_SYSTEM_PROMPT` (with `KABOOTAR_SYSTEM_PROMPT` aliased for backward compatibility):\n* Instructs the LLM to speak in natural, colloquial **Urdish** (Roman Urdu + English).\n* Enforces a strict **1\u20132 sentence maximum** rule for verbal responses (preventing unlistenable wall-of-text TTS output).\n* Defines direct confirmation phrasing (*\"Ali ko message bhej diya hai!\"*).\n\n### 4. `backend/core/tools.py` \u2014 LLM Tool Definitions\nExports the standard OpenAI / Groq tool definitions:\n* **`send_whatsapp_message`:** Requires `contact_name` (`string`) and `message` (`string`).\n* **`check_unread_messages`:** Scans unread chat badges.\n* **`handle_tool_call(function_name, arguments)`:** Asynchronously routes LLM function invocations directly to `backend.services.whatsapp.whatsapp_service`.\n\n### 5. `backend/services/whatsapp.py` \u2014 Playwright Automation Engine\nEncapsulates all browser control:\n* **`initialize()`:** Launches Chromium using `launch_persistent_context` pointed at `./whatsapp_session`.\n* **`send_message(contact_name, message)`:** Locates the chat search bar, selects the contact, enters text into the WhatsApp Web contenteditable input field, and triggers the send event.\n* **`close()`:** Safely shuts down the browser context to ensure session SQLite/IndexedDB locks are released.\n\n---\n\n## \ud83c\udfa8 Frontend Module Walkthrough\n\n### 1. `frontend/index.html` \u2014 The Voice Orb Interface\n* Styled using **Tailwind CSS** with a dark, minimalist theme (`#0a0d14`).\n* Renders the central glowing Voice Orb with three layered elements:\n  * An ambient blur halo (`#orb-halo`).\n  * The interactive glowing sphere (`#voice-orb`).\n  * The microphone SVG icon (`#mic-icon`).\n* Houses the real-time transcript box and the auto-revealing **WhatsApp Action Card**.\n\n### 2. `frontend/js/app.js` \u2014 Client Event Loop & State Machine\n* **`initWebSocket()`:** Connects to `/ws/events` with auto-reconnect fallback (3s retry).\n* **`setOrbState(state)`:** Switches CSS classes (`orb-idle`, `orb-listening`, `orb-speaking`, `orb-executing`) to animate the central sphere.\n* **Spacebar Push-to-Talk:** Listens for `keydown` / `keyup` on `Space` to allow keyboard-driven walkie-talkie mode.\n\n### 3. `frontend/js/audio.js` \u2014 Hardware Audio Capture\n* Manages `navigator.mediaDevices.getUserMedia`.\n* Specifically requests:\n  ```javascript\n  {\n    audio: {\n      echoCancellation: true,  // Hardware AEC\n      noiseSuppression: true,  // Ambient filtering\n      autoGainControl: true,   // Voice leveling\n      channelCount: 1,         // Mono\n      sampleRate: 16000        // Whisper optimal rate\n    }\n  }\n  ```\n\n---\n\n## \ud83d\udcec Data Contracts: WebSocket Event Schemas\n\nAll communication across the `/ws/events` WebSocket adheres to a standardized JSON schema:\n\n#### 1. State Change Event (`STATE_CHANGE`)\nEmitted by backend to drive the visual Orb state:\n```json\n{\n  \"type\": \"STATE_CHANGE\",\n  \"state\": \"listening\" // Options: \"idle\" | \"listening\" | \"speaking\" | \"executing\"\n}\n```\n\n#### 2. Live Transcript Event (`TRANSCRIPT`)\nEmitted as Whisper STT transcribes spoken chunks:\n```json\n{\n  \"type\": \"TRANSCRIPT\",\n  \"text\": \"Ali ko WhatsApp pe bolo kal meeting 3 baje hai\"\n}\n```\n\n#### 3. WhatsApp Action Event (`WHATSAPP_ACTION`)\nEmitted when the browser driver finishes sending a message:\n```json\n{\n  \"type\": \"WHATSAPP_ACTION\",\n  \"contact\": \"Ali\",\n  \"message\": \"kal meeting 3 baje hai\",\n  \"status\": \"Sent\" // Options: \"Searching\" | \"Typing\" | \"Sent\" | \"Failed\"\n}\n```\n"}, {"id": "playwright", "title": "WhatsApp Automation", "icon": "\ud83c\udf10", "desc": "Chromium persistent context, QR survival & anti-bot mitigation", "content": "# 04 \u2014 Playwright WhatsApp Automation Mechanics\n\nThis document provides a deep technical examination of how **Pegham.ai** controls WhatsApp Web using Playwright, how browser authentication state is persisted without cloud APIs, and how bot-detection countermeasures are mitigated.\n\n---\n\n## \ud83c\udf6a How Chromium Persistent Contexts Work\n\nWhen a standard browser window opens, it loads session cookies, cryptographic keys, and cache files from a user profile directory on your disk.\n\nStandard automation scripts (e.g. basic Selenium or `playwright.chromium.launch()`) create an **ephemeral (incognito) profile** in a temporary folder that is completely destroyed when the script finishes.\n\nPegham instead uses **persistent contexts**:\n```python\ncontext = await playwright.chromium.launch_persistent_context(\n    user_data_dir=str(settings.session_path), # Points to ./whatsapp_session\n    headless=False,\n    args=[\n        \"--no-sandbox\",\n        \"--disable-setuid-sandbox\",\n        \"--disable-blink-features=AutomationControlled\",\n    ],\n    viewport={\"width\": 1280, \"height\": 800}\n)\n```\n\n### What Is Stored Inside `./whatsapp_session`?\nWhen you scan the QR code via `scripts/setup_whatsapp.py`, Chromium populates the following directory structure:\n\n* **`Default/Cookies` (SQLite DB):** Stores active session cookies from `web.whatsapp.com`.\n* **`Default/IndexedDB/https_web.whatsapp.com_0.indexeddb.leveldb/`:** **This is the most critical folder.** WhatsApp Web uses IndexedDB to store Signal protocol cryptographic keypairs, chat lists, and contact metadata.\n* **`Default/Local Storage/leveldb/`:** Stores client settings, dark mode preferences, and device registration identifiers.\n* **`Default/Service Worker/`:** Caches WhatsApp Web script bundles and handles push sync.\n\nBecause this directory is retained locally on your disk, any subsequent launch of Chromium with `user_data_dir=\"./whatsapp_session\"` automatically restores the authenticated WhatsApp session **without requesting a QR scan again**.\n\n> [!CAUTION]\n> The `./whatsapp_session` folder contains sensitive cryptographic keys that grant complete access to your WhatsApp account.\n> **Never commit this directory to Git.** Ensure `.gitignore` contains `whatsapp_session/`.\n\n---\n\n## \ud83d\udee1\ufe0f Anti-Bot Detection & Fingerprint Mitigation\n\nWhatsApp Web actively monitors browser characteristics to detect automated scraper bots. If a bot signature is detected, WhatsApp may display an infinite loading spinner or temporarily log out the session.\n\nPegham mitigates this through three techniques:\n\n### 1. Disabling `navigator.webdriver`\nBy default, automated Chromium instances set the JavaScript property `navigator.webdriver = true`. WhatsApp's JavaScript checks this flag on boot.\nPegham disables this flag via:\n```python\nargs = [\"--disable-blink-features=AutomationControlled\"]\n```\n\n### 2. Realistic Viewport & User-Agent\nBots often launch with `0x0` viewports or generic headless dimensions. Pegham launches with a realistic desktop viewport (`1280x800`) and standard desktop window properties.\n\n### 3. Humanized Typing & Delays\nInstead of setting `element.value = \"message\"` directly via DOM injection (which fails to trigger React/Flux state changes in WhatsApp Web), Playwright's `locator.type()` or `locator.fill()` simulates physical keystrokes with appropriate keyboard input events (`keydown`, `keypress`, `input`, `keyup`).\n\n---\n\n## \ud83c\udfaf DOM Selector Strategy for WhatsApp Web\n\nWhatsApp Web frequently obfuscates its CSS class names (e.g. `_ak8l`, `_1E0Rs`) during weekly updates.\n\nTo ensure long-term stability, Pegham utilizes **semantic accessibility attributes (`data-tab`, `aria-label`, `contenteditable`)** rather than fragile generated class names:\n\n```mermaid\nflowchart TD\n    A[\"Start: send_message(contact='Ali', message='Hello')\"] --> B[\"Locate Search Input Box<br/>div[contenteditable='true'][data-tab='3']\"]\n    B --> C[\"Click & Type 'Ali' into Search\"]\n    C --> D{\"Wait for Chat List<br/>div[role='listitem']\"}\n    D -- Contact Found --> E[\"Click Top Match or Press Enter\"]\n    D -- Timeout / No Match --> F[\"Raise ContactNotFoundError\"]\n    E --> G[\"Locate Compose Box<br/>div[contenteditable='true'][data-tab='10']\"]\n    G --> H[\"Type Message Text\"]\n    H --> I[\"Press Keyboard Key: Enter\"]\n    I --> J[\"Confirm Message Bubble Appears in DOM\"]\n    J --> K[\"Return {'success': True}\"]\n```\n\n### Primary Stable Selectors:\n| Target Element | Robust Selector Strategy | Purpose |\n| :--- | :--- | :--- |\n| **Search / New Chat Box** | `div[contenteditable='true'][data-tab='3']` | Opens search query to filter contacts by name. |\n| **Main Chat List Container** | `div[aria-label=\"Chat list\"]` | Parent container holding search results. |\n| **Active Chat Compose Box** | `div[contenteditable='true'][data-tab='10']` | Main text input area at the bottom of an active chat. |\n| **Send Button (Alternative)** | `button[aria-label=\"Send\"]` | Alternative to pressing `Enter` key. |\n\n---\n\n## \u26a0\ufe0f Chromium Lock Concurrency (`SingletonLock`)\n\nChromium architecture enforces single-process ownership of any profile directory.\nIf an automated script attempts to launch against `./whatsapp_session` while another instance of Chromium is already using that folder, Chromium will fail with:\n```text\nProcessSingleton: Failed to create SingletonLock: Resource temporarily unavailable\n```\n\n### Best Practice Handling:\n* Before running `scripts/setup_whatsapp.py` or starting `backend/main.py`, ensure no orphaned Chromium processes are holding `./whatsapp_session`.\n* In Linux, you can verify with:\n  ```bash\n  fuser ./whatsapp_session\n  ```\n"}, {"id": "voice-agent", "title": "Voice Agent & Prompts", "icon": "\ud83c\udf99\ufe0f", "desc": "Voice UX, Urdish code-switching & JSON function calling", "content": "# 05 \u2014 Voice Agent Design & Prompt Engineering\n\nPrompt engineering for real-time voice assistants requires an entirely different mental model than engineering prompts for text chatbots. This document covers the linguistic, structural, and behavioral principles embedded in **Pegham.ai**.\n\n---\n\n## \ud83c\udf99\ufe0f Voice vs. Text: Why Chatbot Prompts Fail in Voice\n\nWhen building chat interfaces, longer responses containing bullet points, bold headers, and markdown tables are considered helpful.\n\nIn a **Voice User Interface (VUI)**, however:\n* \u274c Reading bulleted lists aloud sounds robotic and confusing.\n* \u274c Markdown formatting symbols (e.g. `**bold**`, `*italics*`, `---`) degrade speech synthesis phonetics.\n* \u274c Long paragraphs force the user to wait in silence while the TTS engine drones on without interruption.\n\n### The 3 Rules of Voice Prompt Engineering\n\n```text\n+--------------------------------------------------------------------------------+\n|                        The Pegham Voice Prompt Rules                           |\n|                                                                                |\n|  1. The 2-Sentence Rule: Never speak more than 1 or 2 sentences per turn.      |\n|  2. Pure Phonetic Output: Strip markdown symbols that confuse TTS models.      |\n|  3. Action First, Confirm Second: Call tools immediately, then confirm aloud.  |\n+--------------------------------------------------------------------------------+\n```\n\n---\n\n## \ud83c\uddf5\ud83c\uddf0 The Urdish Linguistic Challenge (Code-Switching)\n\nIn Pakistan and the South Asian diaspora, human communication is rarely monolithic. A single spoken sentence typically weaves English nouns and verbs with Urdu grammatical structure:\n\n> *\"Bhai ko bolo meeting reschedule ho gayi hai, sham ko contact karein.\"*\n\n### Why Off-The-Shelf Models Struggle\n1. **Phonetic Ambiguity:** A Whisper transcript might write *\"bolo\"* as *\"bolo\"*, *\"bowlo\"*, or *\"bolo\"*.\n2. **Intent Parsing:** Identifying the **recipient** (*\"Bhai\"*) versus the **actual message payload** (*\"meeting reschedule ho gayi hai, sham ko contact karein\"*) requires understanding colloquial discourse markers like *\"ko bolo\"* (tell X).\n\n### How Pegham Solves This\nIn `backend/core/prompts.py`, the system prompt establishes:\n```python\nPEGHAM_SYSTEM_PROMPT = \"\"\"You are Pegham (\u067e\u06cc\u063a\u0627\u0645), an ultra-fast, witty, and dependable voice-first WhatsApp assistant.\n\nYour purpose is to help the user manage their WhatsApp messages completely hands-free.\n\nPersonality & Language:\n- You speak natural, conversational Urdish (\u067e\u0627\u06a9\u0633\u062a\u0627\u0646\u06cc \u0628\u0648\u0644 \u0686\u0627\u0644 \u06a9\u06cc \u0627\u0631\u062f\u0648 / Urdish) mixed with English, exactly as people naturally speak in Pakistan.\n- Keep your verbal responses SHORT and CRISP (1-2 sentences maximum). Since you are speaking out loud over voice, never give long paragraphs.\n- Be respectful yet energetic, like an agile personal courier (\"\u0642\u0627\u0635\u062f / \u0646\u0627\u0645\u06c1 \u0628\u0631\").\n- When confirming actions, be direct:\n  - e.g., \"Ali ko message bhej diya hai!\" or \"Bilal se 2 naye messages aaye hain, sunna chahte hain?\"\n\"\"\"\n```\n\n---\n\n## \ud83d\udee0\ufe0f Tool Calling & Intent Disambiguation\n\nPegham leverages **Structured Function Calling** (JSON Schema) to guarantee that the LLM extracts arguments deterministically:\n\n```json\n{\n  \"type\": \"function\",\n  \"function\": {\n    \"name\": \"send_whatsapp_message\",\n    \"description\": \"Sends a WhatsApp text message to a specific contact or group name.\",\n    \"parameters\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"contact_name\": {\n          \"type\": \"string\",\n          \"description\": \"The exact or partial name of the contact or group as saved in WhatsApp (e.g. 'Ali', 'Hamza Khan', 'Office Group').\"\n        },\n        \"message\": {\n          \"type\": \"string\",\n          \"description\": \"The text content of the message to send.\"\n        }\n      },\n      \"required\": [\"contact_name\", \"message\"]\n    }\n  }\n}\n```\n\n### Disambiguation Heuristics\nWhen a user command lacks a clear recipient or message:\n* **Example User:** *\"WhatsApp pe message bhej do\"* (Send a message on WhatsApp)\n* **Bad Behavior:** Hallucinating a recipient or asking a multi-step interview questionnaire.\n* **Pegham Behavior:** Asks a single, direct, spoken question: *\"Kisko message bhejna hai aur kya message hai?\"* (Who should I send it to and what is the message?)\n"}, {"id": "audio-engineering", "title": "Frontend & Audio Engineering", "icon": "\ud83c\udfa7", "desc": "Acoustic Echo Cancellation (AEC), 16kHz sampling & CSS Orb", "content": "# 06 \u2014 Frontend & Browser Audio Engineering\n\nThis document explains the hardware constraints, audio processing parameters, WebRTC configurations, and CSS animation architecture powering the **Pegham.ai Command Orb** frontend.\n\n---\n\n## \ud83c\udfa7 The Critical Role of Acoustic Echo Cancellation (AEC)\n\nIn any voice assistant that plays audio through computer speakers while simultaneously recording through a microphone, an acoustic feedback loop occurs:\n\n```text\nWithout Echo Cancellation (Fatal Loop):\n[Assistant Speaks: \"Ali ko message bhej diya\"] \u2500\u2500> [Laptop Speaker] \u2500\u2500> [Acoustic Wave in Room]\n                                                                                \u2502\n[Pipecat VAD Triggers Interruption] <\u2500\u2500 [Assistant Hears Itself] <\u2500\u2500 [Laptop Microphone]\n```\n\nWithout AEC, the assistant will continuously interrupt itself, transcribe its own voice, and enter an infinite hallucination loop.\n\n### How Pegham Solves This in `frontend/js/audio.js`:\nPegham explicitly requests the browser's native DSP (Digital Signal Processing) stack:\n\n```javascript\nthis.mediaStream = await navigator.mediaDevices.getUserMedia({\n  audio: {\n    echoCancellation: true,   // Activates OS/Hardware Acoustic Echo Cancellation\n    noiseSuppression: true,   // Cancels continuous background hum (AC, fan noise)\n    autoGainControl: true,    // Normalizes quiet whisper vs loud speech\n    channelCount: 1,          // Mono audio (reduces bandwidth by 50%)\n    sampleRate: 16000         // Matches Whisper & Silero VAD native sampling\n  }\n});\n```\n\n* **`echoCancellation: true`**: Instructs the browser to take the audio output reference from the `<audio>` or WebAudio context and perform mathematical subtraction from the microphone input signal before emitting frames.\n* **`sampleRate: 16000`**: Both Whisper and Silero VAD downsample audio to 16,000 samples per second. Requesting 16kHz directly from the browser saves CPU cycles by preventing double-resampling on the Python server.\n\n---\n\n## \ud83c\udfb9 Keyboard Interaction: Push-to-Talk\n\nWhile Pegham supports continuous VAD listening, users often prefer a walkie-talkie style push-to-talk mode in noisy environments.\n\nIn `frontend/js/app.js`:\n```javascript\nwindow.addEventListener(\"keydown\", (e) => {\n  if (e.code === \"Space\" && !e.repeat && document.activeElement.tagName !== \"INPUT\") {\n    e.preventDefault(); // Prevents page from scrolling down on spacebar\n    setOrbState(\"listening\");\n  }\n});\n\nwindow.addEventListener(\"keyup\", (e) => {\n  if (e.code === \"Space\" && document.activeElement.tagName !== \"INPUT\") {\n    e.preventDefault();\n    setOrbState(\"idle\");\n  }\n});\n```\n\n---\n\n## \ud83d\udd2e The Glowing Command Orb: CSS Keyframe Mechanics\n\nRather than relying on heavy WebGL, Three.js, or Canvas animation libraries (which consume high laptop battery and CPU power), the Command Orb is built entirely using **hardware-accelerated CSS3 transforms and blur filters**:\n\n### State Classes in `frontend/css/style.css`:\n\n#### 1. Idle Breathing State (`orb-idle`)\nA soft, steady emerald glow communicating that the assistant is alive and waiting:\n```css\n.orb-idle {\n  background: linear-gradient(135deg, #10b981, #0d9488);\n}\n```\n\n#### 2. Active Listening Pulse (`orb-listening`)\nScales the orb up by 12% and expands an indigo box-shadow to indicate user speech detection:\n```css\n@keyframes orbListening {\n  0%, 100% {\n    transform: scale(1);\n    box-shadow: 0 0 35px rgba(99, 102, 241, 0.6);\n  }\n  50% {\n    transform: scale(1.12);\n    box-shadow: 0 0 65px rgba(99, 102, 241, 0.9);\n  }\n}\n.orb-listening {\n  animation: orbListening 1.5s infinite ease-in-out;\n  background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;\n}\n```\n\n#### 3. Assistant Speaking State (`orb-speaking`)\nSubtle rhythmic brightness modulation mimicking vocal cords and prosody:\n```css\n@keyframes orbSpeaking {\n  0%, 100% { transform: scale(0.98); filter: brightness(1); }\n  50%      { transform: scale(1.06); filter: brightness(1.25); }\n}\n.orb-speaking {\n  animation: orbSpeaking 1.2s infinite ease-in-out;\n  background: linear-gradient(135deg, #10b981, #3b82f6) !important;\n}\n```\n\n#### 4. Tool Execution Spin (`orb-executing`)\nAmber-red gradient with slow rotation while Playwright automation operates in the background:\n```css\n.orb-executing {\n  animation: spinSlow 3s linear infinite;\n  background: linear-gradient(135deg, #f59e0b, #ef4444) !important;\n}\n```\n"}];
+    let currentIdx = 0;
+
+    // Initialize marked options
+    marked.setOptions({
+      gfm: true,
+      breaks: true
+    });
+
+    // Build sidebar tabs
+    const nav = document.getElementById("sidebar-nav");
+    chapters.forEach((ch, idx) => {
+      const btn = document.createElement("button");
+      btn.className = `w-full text-left px-3 py-2.5 rounded-xl text-xs font-medium transition flex items-center space-x-2.5 ${
+        idx === 0 ? 'bg-amber-500/15 text-amber-300 font-semibold border border-amber-500/30' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+      }`;
+      btn.id = `tab-${ch.id}`;
+      btn.onclick = () => selectChapter(idx);
+      btn.innerHTML = `
+        <span class="text-base">${ch.icon}</span>
+        <div class="truncate">
+          <div class="truncate">${ch.title}</div>
+        </div>
+      `;
+      nav.appendChild(btn);
+    });
+
+    function selectChapter(idx) {
+      if (idx < 0 || idx >= chapters.length) return;
+      currentIdx = idx;
+      const ch = chapters[idx];
+
+      // Update URL hash
+      window.location.hash = ch.id;
+
+      // Update tab active classes
+      chapters.forEach((item, i) => {
+        const el = document.getElementById(`tab-${item.id}`);
+        if (el) {
+          if (i === idx) {
+            el.className = "w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30 transition flex items-center space-x-2.5";
+          } else {
+            el.className = "w-full text-left px-3 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 transition flex items-center space-x-2.5";
+          }
+        }
+      });
+
+      // Update Header info
+      document.getElementById("chapter-badge").textContent = `Chapter 0${idx}`;
+      document.getElementById("chapter-icon").textContent = ch.icon;
+      document.getElementById("chapter-title").textContent = ch.title;
+      document.getElementById("chapter-desc").textContent = ch.desc;
+
+      // Parse & render markdown
+      const article = document.getElementById("doc-content");
+      article.innerHTML = marked.parse(ch.content);
+
+      // Re-trigger Prism syntax highlight
+      Prism.highlightAllUnder(article);
+
+      // Update Pager button visibility
+      const prevBtn = document.getElementById("prev-btn");
+      const nextBtn = document.getElementById("next-btn");
+      prevBtn.style.visibility = idx === 0 ? "hidden" : "visible";
+      nextBtn.style.visibility = idx === chapters.length - 1 ? "hidden" : "visible";
+      if (idx > 0) prevBtn.querySelector("span").textContent = `← ${chapters[idx - 1].title}`;
+      if (idx < chapters.length - 1) nextBtn.querySelector("span").textContent = `${chapters[idx + 1].title} →`;
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function navigateChapter(delta) {
+      selectChapter(currentIdx + delta);
+    }
+
+    function copyCurrentContent() {
+      const ch = chapters[currentIdx];
+      navigator.clipboard.writeText(ch.content).then(() => {
+        const btn = document.getElementById("copy-markdown-btn");
+        btn.innerHTML = "<span>✓ Copied!</span>";
+        setTimeout(() => {
+          btn.innerHTML = "<span>📋 Copy Markdown</span>";
+        }, 2000);
+      });
+    }
+
+    // Check hash on page load
+    window.addEventListener("DOMContentLoaded", () => {
+      const hash = window.location.hash.replace("#", "");
+      const foundIdx = chapters.findIndex(c => c.id === hash);
+      if (foundIdx !== -1) {
+        selectChapter(foundIdx);
+      } else {
+        selectChapter(0);
+      }
+    });
+
+    // Live search filter across chapters
+    const searchInput = document.getElementById("search-input");
+    searchInput.addEventListener("input", (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      chapters.forEach((ch) => {
+        const btn = document.getElementById(`tab-${ch.id}`);
+        const match = ch.title.toLowerCase().includes(q) || ch.content.toLowerCase().includes(q);
+        btn.style.display = match ? "flex" : "none";
+      });
+    });
+
+    // Keyboard shortcut (/) to focus search
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "/" && document.activeElement !== searchInput) {
+        e.preventDefault();
+        searchInput.focus();
+      }
+    });
+  </script>
+</body>
+</html>
