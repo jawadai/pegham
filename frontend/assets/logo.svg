@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <defs>
+    <!-- Warm Sunset Gradients -->
+    <linearGradient id="warmSun" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FBBF24" />
+      <stop offset="45%" stop-color="#F97316" />
+      <stop offset="100%" stop-color="#E11D48" />
+    </linearGradient>
+    <linearGradient id="waveGold" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FDE047" />
+      <stop offset="100%" stop-color="#F97316" />
+    </linearGradient>
+    <linearGradient id="envelopeFlapGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FED7AA" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#FB923C" stop-opacity="0.3" />
+    </linearGradient>
+    <linearGradient id="envelopeBack" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#C2410C" />
+      <stop offset="100%" stop-color="#881337" />
+    </linearGradient>
+    <filter id="warmGlowFilter" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Ambient Warm Backlight Glow -->
+  <circle cx="60" cy="62" r="42" fill="#F97316" opacity="0.25" filter="url(#warmGlowFilter)" />
+
+  <!-- Radiating Voice Waves (Sound emitting from message) -->
+  <g stroke="url(#waveGold)" stroke-linecap="round" opacity="0.95">
+    <!-- Outer wave -->
+    <path d="M 35 34 A 33 33 0 0 1 85 34" stroke-width="3.5" opacity="0.6" />
+    <!-- Middle wave -->
+    <path d="M 43 41 A 23 23 0 0 1 77 41" stroke-width="3.5" opacity="0.8" />
+    <!-- Inner wave -->
+    <path d="M 51 48 A 13 13 0 0 1 69 48" stroke-width="3.5" opacity="1.0" />
+    <!-- Voice Source Dot -->
+    <circle cx="60" cy="53" r="3" fill="#FDE047" stroke="none" />
+  </g>
+
+  <!-- Envelope Body Back Interior -->
+  <path d="M 26 58 L 60 36 L 94 58 L 94 92 C 94 97.5 89.5 102 84 102 L 36 102 C 30.5 102 26 97.5 26 92 Z"
+        fill="url(#envelopeBack)" />
+
+  <!-- Envelope Open Upper Flap (Warm Translucent Rim) -->
+  <path d="M 26 58 L 60 36 L 94 58"
+        stroke="url(#warmSun)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+
+  <!-- Envelope Front Pocket -->
+  <path d="M 26 62 L 56 84 C 58.5 85.8 61.5 85.8 64 84 L 94 62 L 94 92 C 94 97.5 89.5 102 84 102 L 36 102 C 30.5 102 26 97.5 26 92 Z"
+        fill="url(#warmSun)" />
+
+  <!-- Soft Fold Highlights & Shadow Lines -->
+  <path d="M 26 99 L 55 76" stroke="#FED7AA" stroke-width="1.8" stroke-opacity="0.4" stroke-linecap="round" />
+  <path d="M 94 99 L 65 76" stroke="#FED7AA" stroke-width="1.8" stroke-opacity="0.4" stroke-linecap="round" />
+  <path d="M 26 62 L 57 84 C 58.8 85.3 61.2 85.3 63 84 L 94 62"
+        fill="none" stroke="#FEF08A" stroke-width="2" stroke-opacity="0.6" stroke-linecap="round" />
+
+  <!-- Warm Floating Spark Badge at Center Fold -->
+  <circle cx="60" cy="74" r="4.5" fill="#FEF08A" opacity="0.9" />
+</svg>
