@@ -62,9 +62,51 @@ class AIService:
             logger.error(f"Whisper transcription failed: {e}")
             raise e
 
+    async def _call_llm(self, messages: list, tools: Optional[list] = None):
+        """
+        Calls Groq chat completions with automatic fallback across supported models
+        in case a specific model is not accessible or deprecated.
+        """
+        candidate_models = [
+            settings.GROQ_LLM_MODEL,
+            "llama-3.1-8b-instant",
+            "llama-3.1-70b-versatile",
+            "llama3-70b-8192",
+            "llama3-8b-8192"
+        ]
+        # De-duplicate while preserving order
+        models = []
+        for m in candidate_models:
+            if m and m not in models:
+                models.append(m)
+
+        last_error = None
+        for model_name in models:
+            try:
+                kwargs: Dict[str, Any] = {
+                    "model": model_name,
+                    "messages": messages,
+                    "temperature": 0.3
+                }
+                if tools:
+                    kwargs["tools"] = tools
+                    kwargs["tool_choice"] = "auto"
+
+                response = await self.client.chat.completions.create(**kwargs)
+                return response
+            except Exception as e:
+                err_str = str(e).lower()
+                if "model_not_found" in err_str or "does not exist" in err_str or "404" in err_str:
+                    logger.warning(f"Groq model '{model_name}' not found. Trying fallback...")
+                    last_error = e
+                    continue
+                raise e
+
+        raise last_error or RuntimeError("No accessible Groq models available.")
+
     async def process_instruction(self, user_text: str) -> Dict[str, Any]:
         """
-        Processes user text with Groq LLaMA 3.3 70B, dispatches tool calls,
+        Processes user text with Groq LLM Brain, dispatches tool calls,
         and generates a concise verbal response in Urdu/Roman Urdu.
         """
         if not self.client:
@@ -72,21 +114,15 @@ class AIService:
         if not self.client:
             raise ValueError("Groq API key is missing. Set GROQ_API_KEY in .env.")
 
-        logger.info(f"🧠 Processing instruction with LLaMA 3.3 70B: \"{user_text}\"")
+        logger.info(f"🧠 Processing instruction with Groq: \"{user_text}\"")
 
         messages = [
             {"role": "system", "content": PEGHAM_SYSTEM_PROMPT},
             {"role": "user", "content": user_text}
         ]
 
-        # 1. Call LLM with WhatsApp tools
-        response = await self.client.chat.completions.create(
-            model=settings.GROQ_LLM_MODEL,
-            messages=messages,
-            tools=WHATSAPP_TOOLS,
-            tool_choice="auto",
-            temperature=0.3
-        )
+        # 1. Call LLM with WhatsApp tools (with automatic model fallback)
+        response = await self._call_llm(messages=messages, tools=WHATSAPP_TOOLS)
 
         response_message = response.choices[0].message
         action_result: Optional[Dict[str, Any]] = None
@@ -134,11 +170,7 @@ class AIService:
 
             # Call LLM again to synthesize a crisp verbal confirmation
             try:
-                second_response = await self.client.chat.completions.create(
-                    model=settings.GROQ_LLM_MODEL,
-                    messages=messages,
-                    temperature=0.3
-                )
+                second_response = await self._call_llm(messages=messages)
                 spoken_response = (second_response.choices[0].message.content or "").strip()
             except Exception as e:
                 logger.warning(f"Secondary confirmation LLM call failed: {e}")

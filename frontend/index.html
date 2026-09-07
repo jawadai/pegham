@@ -14,7 +14,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet">
   
   <!-- Custom CSS & Favicon -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📨</text></svg>">
+  <link rel="icon" type="image/svg+xml" href="/static/assets/logo.svg">
   <link rel="stylesheet" href="/static/css/style.css">
   
   <script>
@@ -44,28 +44,22 @@
   <!-- Header: App Name & Status Bar -->
   <header class="w-full max-w-xl mx-auto px-6 py-5 flex items-center justify-between border-b border-slate-800/80">
     <div class="flex items-center space-x-3">
-      <span class="text-2xl select-none">📨</span>
+      <!-- Warm Pegham Logo Mark -->
+      <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500/20 via-orange-500/15 to-rose-500/20 p-2 border border-amber-500/30 flex items-center justify-center shadow-lg shadow-amber-500/10 transition-transform duration-300 hover:scale-105 hover:border-amber-400/50">
+        <img src="/static/assets/logo.svg" alt="Pegham Logo" class="w-full h-full object-contain filter drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]">
+      </div>
       <div>
         <h1 class="font-bold text-lg tracking-tight flex items-center gap-2">
-          <span class="bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400 bg-clip-text text-transparent font-extrabold">Pegham</span><span class="text-slate-300 font-semibold">.ai</span>
-          <span class="font-urdu text-sm text-amber-400 font-normal">پیغام</span>
+          Pegham.ai <span class="font-urdu text-sm text-amber-400 font-normal">پیغام</span>
         </h1>
         <p class="text-xs text-slate-400">Voice-First WhatsApp Copilot</p>
       </div>
     </div>
     
-    <div class="flex items-center space-x-2.5">
-      <!-- Interactive Docs Link -->
-      <a href="/guide" target="_blank" title="Open Interactive Developer Docs" class="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-full bg-slate-900/80 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-xs font-medium text-slate-300 hover:text-white transition">
-        <span>📖</span>
-        <span class="hidden sm:inline">Docs</span>
-      </a>
-
-      <!-- WhatsApp Connection Status Badge -->
-      <div id="whatsapp-badge" class="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs font-medium">
-        <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse" id="status-dot"></span>
-        <span id="status-text" class="text-slate-300">Checking WhatsApp...</span>
-      </div>
+    <!-- WhatsApp Connection Status Badge -->
+    <div id="whatsapp-badge" class="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs font-medium">
+      <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse" id="status-dot"></span>
+      <span id="status-text" class="text-slate-300">Checking WhatsApp...</span>
     </div>
   </header>
 
@@ -113,15 +107,6 @@
       </div>
     </div>
 
-    <!-- Optional Text Command Input Fallback -->
-    <div class="w-full mt-4 flex items-center gap-2">
-      <input id="text-input" type="text" placeholder="Or type a command (e.g. 'Ali ko WhatsApp pe bolo Salam')..." class="flex-1 bg-slate-900/90 border border-slate-800 focus:border-emerald-500/60 rounded-xl px-4 py-2.5 text-sm text-slate-200 outline-none transition placeholder:text-slate-600" />
-      <button id="text-send-btn" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-xl transition flex items-center gap-1.5 shadow-lg shadow-emerald-950">
-        <span>Send</span>
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-      </button>
-    </div>
-
   </main>
 
   <!-- Footer -->
@@ -130,7 +115,7 @@
   </footer>
 
   <!-- Frontend Scripts -->
-  <script src="/static/js/audio.js?v=3"></script>
-  <script src="/static/js/app.js?v=3"></script>
+  <script src="/static/js/audio.js"></script>
+  <script src="/static/js/app.js"></script>
 </body>
 </html>
