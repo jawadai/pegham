@@ -36,23 +36,62 @@ async def setup_whatsapp_session():
         )
 
         page = context.pages[0] if context.pages else await context.new_page()
-        await page.goto("https://web.whatsapp.com", wait_until="networkidle")
+        await page.goto("https://web.whatsapp.com", wait_until="domcontentloaded")
 
-        logger.info("Waiting for WhatsApp Web to load chats after QR scan...")
-        
-        # Selector for the main chat list search box or side panel
-        chat_list_selector = "div[contenteditable='true'][data-tab='3']"
-        
-        try:
-            # Wait up to 120 seconds for the user to scan the QR code
-            await page.wait_for_selector(chat_list_selector, timeout=120000)
+        logger.info("Waiting for WhatsApp Web to load...")
+        logger.info("👉 Please scan the QR code in the browser with your phone.")
+        logger.info("   (WhatsApp -> Settings / Menu -> Linked Devices -> Link a Device)")
+
+        # Multiple resilient selectors representing a logged-in WhatsApp Web state
+        logged_in_selectors = [
+            "#pane-side",
+            "#side",
+            "div[aria-label='Chat list']",
+            "div[role='grid']",
+            "div[contenteditable='true']",
+            "button[aria-label='New chat']",
+            "header [data-icon='chat']",
+            "div[data-tab='3']",
+        ]
+
+        start_time = asyncio.get_event_loop().time()
+        timeout_seconds = 180  # 3 minutes
+        logged_in = False
+        last_logged_time = 0
+
+        while asyncio.get_event_loop().time() - start_time < timeout_seconds:
+            elapsed = int(asyncio.get_event_loop().time() - start_time)
+            
+            # Check if any logged in element has appeared
+            for selector in logged_in_selectors:
+                try:
+                    el = await page.query_selector(selector)
+                    if el and await el.is_visible():
+                        logged_in = True
+                        logger.info(f"Detected WhatsApp Web interface element: '{selector}'")
+                        break
+                except Exception:
+                    pass
+
+            if logged_in:
+                break
+
+            # Periodic status log every 15 seconds
+            if elapsed - last_logged_time >= 15:
+                logger.info(f"⏳ Waiting for QR scan and chat sync... ({elapsed}s / {timeout_seconds}s)")
+                last_logged_time = elapsed
+
+            await asyncio.sleep(2)
+
+        if logged_in:
             logger.info("🎉 SUCCESS: WhatsApp Web is logged in! Session successfully saved.")
-            logger.info("You will NOT need to scan the QR code again.")
-            await asyncio.sleep(3)
-        except Exception as e:
-            logger.error(f"Login timed out or failed: {e}")
-        finally:
-            await context.close()
+            logger.info("Writing session cookies & IndexedDB to disk...")
+            await asyncio.sleep(4)
+            logger.info("Done! You will NOT need to scan the QR code again.")
+        else:
+            logger.error("Login timed out after 3 minutes. Please ensure your phone is connected to the internet and re-run.")
+
+    await context.close()
 
 
 if __name__ == "__main__":
