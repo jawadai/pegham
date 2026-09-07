@@ -3,11 +3,18 @@ FastAPI Server Entrypoint for Pegham.ai (پیغام).
 Serves WebRTC/WebSocket endpoints, API health, and mounts the frontend UI.
 """
 
+import sys
+from pathlib import Path
+
+# Ensure project root is in sys.path when executed directly
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from pathlib import Path
 
 from backend.config import settings
 from backend.utils.logger import logger
@@ -111,5 +118,6 @@ if __name__ == "__main__":
         "backend.main:app",
         host=settings.HOST,
         port=settings.PORT,
-        reload=settings.DEBUG
+        reload=settings.DEBUG,
+        app_dir=str(PROJECT_ROOT)
     )
