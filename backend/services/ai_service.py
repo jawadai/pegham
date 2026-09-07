@@ -93,6 +93,23 @@ class AIService:
 
         # 2. Check if the model called any tools
         if response_message.tool_calls:
+            assistant_msg = {
+                "role": "assistant",
+                "content": response_message.content or "",
+                "tool_calls": [
+                    {
+                        "id": tc.id,
+                        "type": "function",
+                        "function": {
+                            "name": tc.function.name,
+                            "arguments": tc.function.arguments
+                        }
+                    }
+                    for tc in response_message.tool_calls
+                ]
+            }
+            messages.append(assistant_msg)
+
             for tool_call in response_message.tool_calls:
                 function_name = tool_call.function.name
                 try:
@@ -108,8 +125,6 @@ class AIService:
                     "result": tool_output
                 }
 
-                # Append assistant tool call & tool response to messages for final reply
-                messages.append(response_message)
                 messages.append({
                     "role": "tool",
                     "tool_call_id": tool_call.id,
@@ -118,12 +133,21 @@ class AIService:
                 })
 
             # Call LLM again to synthesize a crisp verbal confirmation
-            second_response = await self.client.chat.completions.create(
-                model=settings.GROQ_LLM_MODEL,
-                messages=messages,
-                temperature=0.3
-            )
-            spoken_response = second_response.choices[0].message.content.strip()
+            try:
+                second_response = await self.client.chat.completions.create(
+                    model=settings.GROQ_LLM_MODEL,
+                    messages=messages,
+                    temperature=0.3
+                )
+                spoken_response = (second_response.choices[0].message.content or "").strip()
+            except Exception as e:
+                logger.warning(f"Secondary confirmation LLM call failed: {e}")
+                contact = (action_result.get("arguments") or {}).get("contact_name", "Contact")
+                if action_result.get("result", {}).get("success"):
+                    spoken_response = f"{contact} ko message bhej diya hai!"
+                else:
+                    err_msg = action_result.get("result", {}).get("error", "Chat nahi khul saki")
+                    spoken_response = f"{contact} ko message nahi ja saka. {err_msg}"
         else:
             spoken_response = (response_message.content or "").strip()
 
