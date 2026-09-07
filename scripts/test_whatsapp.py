@@ -16,7 +16,7 @@ from backend.utils.logger import logger
 async def main():
     if len(sys.argv) < 3:
         print("Usage: python scripts/test_whatsapp.py <contact_name> <message>")
-        print("Example: python scripts/test_whatsapp.py 'Hamza' 'Testing Kabootar AI!'")
+        print("Example: python scripts/test_whatsapp.py 'Hamza' 'Testing Pegham AI!'")
         return
 
     contact = sys.argv[1]

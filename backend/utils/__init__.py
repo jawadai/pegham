@@ -1,3 +1,3 @@
 """
-Utilities package for Kabootar.ai
+Utilities package for Pegham.ai
 """

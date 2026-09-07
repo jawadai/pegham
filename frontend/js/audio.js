@@ -1,5 +1,5 @@
 /**
- * Audio Capture and WebRTC Stream handler for Kabootar.ai
+ * Audio Capture and WebRTC Stream handler for Pegham.ai
  * Ensures hardware/browser Echo Cancellation is active.
  */
 

@@ -1,5 +1,5 @@
 """
-Pipecat Real-Time Voice Pipeline builder for Kabootar.ai.
+Pipecat Real-Time Voice Pipeline builder for Pegham.ai.
 Orchestrates: Transport -> VAD -> STT -> LLM (with tools) -> TTS -> Transport Output.
 """
 

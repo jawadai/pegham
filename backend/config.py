@@ -1,5 +1,5 @@
 """
-Configuration management for Kabootar.ai using Pydantic Settings.
+Configuration management for Pegham.ai using Pydantic Settings.
 """
 
 from pathlib import Path

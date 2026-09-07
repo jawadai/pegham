@@ -1,5 +1,5 @@
 /**
- * Main Frontend Application Script for Kabootar.ai
+ * Main Frontend Application Script for Pegham.ai
  * Handles WebSocket events, Orb animation states, and UI updates.
  */
 
@@ -24,7 +24,7 @@ document.addEventListener("DOMContentLoaded", () => {
     ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
-      console.log("Connected to Kabootar Event Bus.");
+      console.log("Connected to Pegham Event Bus.");
       checkHealth();
     };
 
@@ -81,7 +81,7 @@ document.addEventListener("DOMContentLoaded", () => {
       orbStatus.className = "text-sm font-medium tracking-wide uppercase text-indigo-400";
     } else if (state === "speaking") {
       voiceOrb.classList.add("orb-speaking");
-      orbStatus.textContent = "Kabootar is speaking...";
+      orbStatus.textContent = "Pegham is speaking...";
       orbStatus.className = "text-sm font-medium tracking-wide uppercase text-emerald-400";
     } else if (state === "executing") {
       voiceOrb.classList.add("orb-executing");
@@ -107,7 +107,7 @@ document.addEventListener("DOMContentLoaded", () => {
         await window.audioController.requestMicrophone();
         setOrbState("listening");
       } catch (err) {
-        alert("Please allow microphone permissions to use Kabootar.ai.");
+        alert("Please allow microphone permissions to use Pegham.ai.");
       }
     } else {
       setOrbState("idle");

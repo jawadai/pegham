@@ -1,5 +1,5 @@
 """
-FastAPI Server Entrypoint for Kabootar.ai (کبوتر).
+FastAPI Server Entrypoint for Pegham.ai (پیغام).
 Serves WebRTC/WebSocket endpoints, API health, and mounts the frontend UI.
 """
 
@@ -19,15 +19,15 @@ async def lifespan(app: FastAPI):
     """
     Lifecycle manager for application startup and shutdown.
     """
-    logger.info("🕊️ Starting Kabootar.ai Server...")
+    logger.info("🕊️ Starting Pegham.ai Server...")
     # Optional background initialization of services
     yield
-    logger.info("Shutting down Kabootar.ai Server...")
+    logger.info("Shutting down Pegham.ai Server...")
     await whatsapp_service.close()
 
 
 app = FastAPI(
-    title="Kabootar.ai API",
+    title="Pegham.ai API",
     description="Voice-First WhatsApp Copilot powered by Pipecat & Playwright",
     version="0.1.0",
     lifespan=lifespan
@@ -44,7 +44,7 @@ async def health_check():
     """
     return {
         "status": "healthy",
-        "app": "Kabootar.ai",
+        "app": "Pegham.ai",
         "whatsapp_ready": whatsapp_service.is_ready
     }
 
@@ -71,7 +71,7 @@ async def serve_index():
     index_file = FRONTEND_DIR / "index.html"
     if index_file.exists():
         return FileResponse(index_file)
-    return {"message": "Kabootar.ai API is running. Frontend index.html not found."}
+    return {"message": "Pegham.ai API is running. Frontend index.html not found."}
 
 # Mount static assets if frontend directory exists
 if FRONTEND_DIR.exists():

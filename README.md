@@ -1,18 +1,18 @@
-# 🕊️ Kabootar.ai (کبوتر)
-### *نیا زمانہ، نیا کبوتر — The Voice-First WhatsApp Operating Copilot*
+# 🕊️ Pegham.ai (پیغام)
+### *نیا زمانہ، نیا پیغام — The Voice-First WhatsApp Operating Copilot*
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Framework: Pipecat](https://img.shields.io/badge/pipeline-Pipecat%20AI-purple.svg)](https://github.com/pipecat-ai/pipecat)
 [![Automation: Playwright](https://img.shields.io/badge/automation-Playwright-green.svg)](https://playwright.dev/python/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**Kabootar.ai** is an open-source, real-time voice copilot that lets you control your personal WhatsApp completely hands-free using natural spoken **Urdish** (conversational Urdu + English) or pure English.
+**Pegham.ai** is an open-source, real-time voice copilot that lets you control your personal WhatsApp completely hands-free using natural spoken **Urdish** (conversational Urdu + English) or pure English.
 
-Speak into your microphone—**Kabootar** transcribes your voice, extracts your intended recipient and message, operates WhatsApp Web in the background using Playwright, and confirms the action aloud in real time.
+Speak into your microphone—**Pegham** transcribes your voice, extracts your intended recipient and message, operates WhatsApp Web in the background using Playwright, and confirms the action aloud in real time.
 
 ---
 
-## 🌟 Why Kabootar? (Why ChatGPT Can't Do This)
+## 🌟 Why Pegham? (Why ChatGPT Can't Do This)
 
 Consumer voice assistants like ChatGPT Voice and Gemini Live are walled inside mobile sandboxes:
 * ❌ They **cannot** access your personal WhatsApp account.
@@ -20,7 +20,7 @@ Consumer voice assistants like ChatGPT Voice and Gemini Live are walled inside m
 * ❌ They **cannot** trigger real-world actions on your local desktop.
 * ❌ Setting up the official Meta WhatsApp Cloud API requires business verification, credit cards, and rigid template approvals.
 
-**Kabootar.ai solves this directly on your machine:**
+**Pegham.ai solves this directly on your machine:**
 * ✅ **Zero Meta Cloud API Required:** Uses Playwright with a persistent browser session. You scan the WhatsApp Web QR code **once**, and it stays authenticated forever.
 * ✅ **Native Urdish Understanding:** Built to understand colloquial Pakistani speech patterns (e.g., *"Bhai ko bolo main 10 min mein pohanch raha hoon"*).
 * ✅ **Real-Time Voice Streaming:** Powered by **Pipecat**, delivering sub-second voice feedback, barge-in (interruption handling), and Acoustic Echo Cancellation (AEC).
@@ -41,7 +41,7 @@ Consumer voice assistants like ChatGPT Voice and Gemini Live are walled inside m
                                         WebRTC Audio + WebSocket Events
                                                      │
 +────────────────────────────────────────────────────▼────────────────────────────────────────────────────+
-|                                        Kabootar.ai Backend (FastAPI)                                    |
+|                                         Pegham.ai Backend (FastAPI)                                      |
 |                                                                                                         |
 |   +-------------------------------------------------------------------------------------------------+   |
 |   | 1. WebRTC Audio Transport & Silero VAD (Detects user speech & thinking pauses)                   |   |
@@ -76,7 +76,7 @@ Consumer voice assistants like ChatGPT Voice and Gemini Live are walled inside m
 ## 📁 Project Directory Layout
 
 ```text
-Nuqta/ (Kabootar.ai)
+Pegham/ (Pegham.ai)
 ├── README.md                 # Project documentation and guide
 ├── .gitignore                # Protects secrets, browser sessions, and virtualenvs
 ├── .env.example              # Template for API keys and configuration
@@ -125,8 +125,8 @@ Nuqta/ (Kabootar.ai)
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/your-username/Nuqta.git
-   cd Nuqta
+   git clone https://github.com/your-username/Pegham.git
+   cd Pegham
    ```
 
 2. **Create and activate a virtual environment:**
@@ -185,7 +185,7 @@ python scripts/setup_whatsapp.py
 
 ### 5. Run the Application
 
-Start the Kabootar.ai server:
+Start the Pegham.ai server:
 ```bash
 python backend/main.py
 ```
