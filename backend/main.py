@@ -83,6 +83,23 @@ async def serve_guide():
         return FileResponse(guide_file)
     return {"message": "Documentation guide not found. Run python scripts/build_docs_html.py"}
 
+
+# Neural Speech Synthesis Endpoint (100% Free Edge-TTS: Zero Azure Key Required)
+@app.get("/api/tts")
+async def get_tts_audio(text: str):
+    """
+    Synthesizes text into high-fidelity Urdu speech (MP3) using edge-tts.
+    Zero Azure keys or cloud subscriptions required!
+    """
+    from fastapi.responses import StreamingResponse, Response
+    if not text:
+        return Response(status_code=400, content="Missing text query parameter")
+    from backend.services.tts import tts_service
+    return StreamingResponse(
+        tts_service.synthesize_stream(text),
+        media_type="audio/mpeg"
+    )
+
 # Mount static assets if frontend directory exists
 if FRONTEND_DIR.exists():
     app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")

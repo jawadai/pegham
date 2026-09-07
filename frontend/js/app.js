@@ -61,6 +61,25 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // Stream & play synthesized Urdu voice audio (Free Edge-TTS)
+  function playSpokenAudio(text) {
+    if (!text) return;
+    setOrbState("speaking");
+    const audioUrl = `/api/tts?text=${encodeURIComponent(text)}`;
+    const audio = new Audio(audioUrl);
+    audio.onended = () => {
+      setOrbState("idle");
+    };
+    audio.onerror = (e) => {
+      console.warn("Audio playback interrupted or failed:", e);
+      setOrbState("idle");
+    };
+    audio.play().catch(err => {
+      console.warn("Audio autoplay blocked by browser:", err);
+      setOrbState("idle");
+    });
+  }
+
   // Handle events emitted from backend
   function handleServerEvent(event) {
     if (event.type === "STATE_CHANGE") {
@@ -69,6 +88,11 @@ document.addEventListener("DOMContentLoaded", () => {
       transcriptText.textContent = `"${event.text}"`;
     } else if (event.type === "WHATSAPP_ACTION") {
       showActionCard(event.contact, event.message, event.status);
+      if (event.status === "Sent") {
+        playSpokenAudio(event.spoken_response || `${event.contact} ko message bhej diya hai!`);
+      }
+    } else if (event.type === "SPEAK") {
+      playSpokenAudio(event.text);
     }
   }
 

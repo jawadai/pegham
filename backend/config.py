@@ -26,7 +26,11 @@ class Settings(BaseSettings):
     OLLAMA_BASE_URL: str = "http://localhost:11434/v1"
     OLLAMA_MODEL: str = "llama3.2"
 
-    # Voice Synthesis Credentials
+    # Voice Synthesis Configuration (100% Free with Edge-TTS: Zero Azure Key Required!)
+    TTS_PROVIDER: str = "edge_tts"  # Options: "edge_tts", "azure", "elevenlabs"
+    EDGE_TTS_VOICE: str = "ur-PK-UzmaNeural"  # or "ur-PK-AsadNeural"
+
+    # Optional Voice Synthesis Credentials
     AZURE_SPEECH_KEY: str = ""
     AZURE_SPEECH_REGION: str = "eastus"
     ELEVENLABS_API_KEY: str = ""

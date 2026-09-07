@@ -18,3 +18,6 @@ python-dotenv>=1.0.0
 # Async HTTP & Utilities
 aiohttp>=3.9.0
 loguru>=0.7.0
+
+# Free Neural Text-to-Speech (Zero Azure Key Required)
+edge-tts>=6.1.12
