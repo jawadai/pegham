@@ -12,10 +12,21 @@ class Settings(BaseSettings):
     PORT: int = 8000
     DEBUG: bool = True
 
-    # Voice AI Credentials
-    OPENAI_API_KEY: str = ""
-    ANTHROPIC_API_KEY: str = ""
+    # LLM & Conversational Brain (Defaults to 100% Free Groq Llama 3.3 70B)
+    LLM_PROVIDER: str = "groq"  # Options: "groq", "ollama", "openai", "anthropic"
     GROQ_API_KEY: str = ""
+    GROQ_LLM_MODEL: str = "llama-3.3-70b-versatile"
+
+    # Optional / Alternative LLM Providers
+    OPENAI_API_KEY: str = ""
+    OPENAI_LLM_MODEL: str = "gpt-4o-mini"
+    ANTHROPIC_API_KEY: str = ""
+
+    # Local Offline Ollama Provider (100% Offline & Free)
+    OLLAMA_BASE_URL: str = "http://localhost:11434/v1"
+    OLLAMA_MODEL: str = "llama3.2"
+
+    # Voice Synthesis Credentials
     AZURE_SPEECH_KEY: str = ""
     AZURE_SPEECH_REGION: str = "eastus"
     ELEVENLABS_API_KEY: str = ""
@@ -41,6 +52,23 @@ class Settings(BaseSettings):
         path = Path(self.WHATSAPP_SESSION_DIR)
         path.mkdir(parents=True, exist_ok=True)
         return path
+
+    @property
+    def active_llm_provider(self) -> str:
+        """
+        Determines the active LLM brain provider. Defaults to 100% free Groq Llama 3.3.
+        """
+        if self.LLM_PROVIDER == "ollama":
+            return "ollama"
+        if self.LLM_PROVIDER == "openai" and self.OPENAI_API_KEY:
+            return "openai"
+        if self.LLM_PROVIDER == "anthropic" and self.ANTHROPIC_API_KEY:
+            return "anthropic"
+        if self.GROQ_API_KEY:
+            return "groq"
+        if self.OPENAI_API_KEY:
+            return "openai"
+        return "groq"
 
 
 settings = Settings()

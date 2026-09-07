@@ -173,15 +173,22 @@ cp .env.example .env
 
 Edit `.env` and provide your API keys:
 ```ini
-# Required: At least one LLM key
-OPENAI_API_KEY=sk-...
-
-# Recommended: For sub-second Whisper STT
+# 100% FREE DEFAULT: 1 Single Free Groq Key powers BOTH the Brain (Llama 3.3 70B) & STT (Whisper)
+# Get your key with 0 credit card needed at: https://console.groq.com
 GROQ_API_KEY=gsk_...
+LLM_PROVIDER=groq
+GROQ_LLM_MODEL=llama-3.3-70b-versatile
 
-# Recommended: For high quality Urdu TTS
+# Free Tier (F0) Native Urdu TTS: 500,000 free chars/month from Azure
 AZURE_SPEECH_KEY=your_azure_key
 AZURE_SPEECH_REGION=eastus
+
+# Optional: To use 100% offline Local LLM (Ollama)
+# LLM_PROVIDER=ollama
+
+# Optional: To use OpenAI instead (Pay-as-you-go)
+# LLM_PROVIDER=openai
+# OPENAI_API_KEY=sk-...
 ```
 
 ---
