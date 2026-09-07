@@ -32,14 +32,25 @@ class TTSService:
             logger.warning("edge-tts library is not installed. Install via: pip install edge-tts")
             return
 
-        logger.info(f"🎙️ Synthesizing speech with edge-tts (voice={self.voice}): '{text}'")
-        try:
-            communicate = edge_tts.Communicate(text=text, voice=self.voice)
-            async for chunk in communicate.stream():
-                if chunk["type"] == "audio":
-                    yield chunk["data"]
-        except Exception as e:
-            logger.error(f"Failed to synthesize audio with edge-tts: {e}")
+        import re
+        # Clean text of emojis and special markdown symbols that can confuse Edge-TTS
+        clean_text = re.sub(r'[^\w\s\d.,!?:;\'"۔،؟\u0600-\u06FF]', ' ', text).strip()
+        if not clean_text:
+            clean_text = text.strip()
+
+        candidate_voices = [self.voice, "ur-PK-AsadNeural", "en-US-JennyNeural"]
+        for voice_name in candidate_voices:
+            try:
+                communicate = edge_tts.Communicate(text=clean_text, voice=voice_name)
+                audio_yielded = False
+                async for chunk in communicate.stream():
+                    if chunk["type"] == "audio":
+                        audio_yielded = True
+                        yield chunk["data"]
+                if audio_yielded:
+                    return
+            except Exception as e:
+                logger.warning(f"Voice {voice_name} failed: {e}. Trying fallback voice...")
 
     async def synthesize_bytes(self, text: str) -> bytes:
         """

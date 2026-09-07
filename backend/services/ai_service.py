@@ -62,19 +62,44 @@ class AIService:
             logger.error(f"Whisper transcription failed: {e}")
             raise e
 
+    async def _get_active_groq_models(self) -> list:
+        """
+        Dynamically queries Groq's models endpoint to discover currently active chat models.
+        """
+        try:
+            res = await self.client.models.list()
+            active_ids = [m.id for m in res.data]
+            logger.info(f"📋 Live Groq Models available on account: {active_ids}")
+            chat_models = [
+                mid for mid in active_ids
+                if not any(x in mid.lower() for x in ["whisper", "embed", "tts", "guard", "safeguard", "vision", "moderation"])
+            ]
+            return chat_models
+        except Exception as e:
+            logger.warning(f"Could not dynamically list Groq models: {e}")
+            return []
+
     async def _call_llm(self, messages: list, tools: Optional[list] = None):
         """
-        Calls Groq chat completions with automatic fallback across supported models
-        in case a specific model is not accessible or deprecated.
+        Calls Groq chat completions with automatic dynamic discovery and fallback.
         """
-        candidate_models = [
-            settings.GROQ_LLM_MODEL,
+        # Dynamic discovery from Groq API
+        discovered_models = await self._get_active_groq_models()
+
+        candidate_models = []
+        if settings.GROQ_LLM_MODEL:
+            candidate_models.append(settings.GROQ_LLM_MODEL)
+        candidate_models.extend(discovered_models)
+        candidate_models.extend([
             "llama-3.1-8b-instant",
-            "llama-3.1-70b-versatile",
-            "llama3-70b-8192",
-            "llama3-8b-8192"
-        ]
-        # De-duplicate while preserving order
+            "openai/gpt-oss-20b",
+            "openai/gpt-oss-120b",
+            "qwen/qwen3.6-27b",
+            "llama3-8b-8192",
+            "llama3-70b-8192"
+        ])
+
+        # De-duplicate while preserving priority order
         models = []
         for m in candidate_models:
             if m and m not in models:
@@ -92,17 +117,30 @@ class AIService:
                     kwargs["tools"] = tools
                     kwargs["tool_choice"] = "auto"
 
+                logger.info(f"🤖 Querying Groq with model: '{model_name}'...")
                 response = await self.client.chat.completions.create(**kwargs)
                 return response
             except Exception as e:
                 err_str = str(e).lower()
-                if "model_not_found" in err_str or "does not exist" in err_str or "404" in err_str:
-                    logger.warning(f"Groq model '{model_name}' not found. Trying fallback...")
+                is_model_error = any(
+                    term in err_str
+                    for term in [
+                        "model_not_found",
+                        "model_decommissioned",
+                        "decommissioned",
+                        "does not exist",
+                        "no longer supported",
+                        "404",
+                        "400"
+                    ]
+                )
+                if is_model_error:
+                    logger.warning(f"Groq model '{model_name}' rejected ({e}). Trying next fallback model...")
                     last_error = e
                     continue
                 raise e
 
-        raise last_error or RuntimeError("No accessible Groq models available.")
+        raise last_error or RuntimeError("No accessible Groq chat models available.")
 
     async def process_instruction(self, user_text: str) -> Dict[str, Any]:
         """
