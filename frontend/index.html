@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kabootar.ai (کبوتر) - Voice WhatsApp Copilot</title>
+  
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet">
+  
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="/static/css/style.css">
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            urdu: ['Noto Nastaliq Urdu', 'serif'],
+          },
+          colors: {
+            darkbg: '#0a0d14',
+            darkcard: '#121722',
+            primary: '#10b981', // Emerald WhatsApp green
+            accent: '#6366f1',  // Indigo tech accent
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-darkbg text-slate-100 min-h-screen flex flex-col font-sans selection:bg-primary selection:text-white">
+
+  <!-- Header: App Name & Status Bar -->
+  <header class="w-full max-w-xl mx-auto px-6 py-5 flex items-center justify-between border-b border-slate-800/80">
+    <div class="flex items-center space-x-3">
+      <span class="text-2xl">🕊️</span>
+      <div>
+        <h1 class="font-bold text-lg tracking-tight flex items-center gap-2">
+          Kabootar.ai <span class="font-urdu text-sm text-primary font-normal">کبوتر</span>
+        </h1>
+        <p class="text-xs text-slate-400">Voice-First WhatsApp Copilot</p>
+      </div>
+    </div>
+    
+    <!-- WhatsApp Connection Status Badge -->
+    <div id="whatsapp-badge" class="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs font-medium">
+      <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse" id="status-dot"></span>
+      <span id="status-text" class="text-slate-300">Checking WhatsApp...</span>
+    </div>
+  </header>
+
+  <!-- Main Content: Central Glowing Orb & Live Transcripts -->
+  <main class="flex-1 flex flex-col items-center justify-center px-6 py-8 max-w-xl w-full mx-auto text-center">
+
+    <!-- Glowing Voice Orb Container -->
+    <div class="relative my-8 flex items-center justify-center">
+      <div id="orb-halo" class="absolute w-44 h-44 rounded-full bg-emerald-500/20 blur-2xl transition-all duration-700 pointer-events-none"></div>
+      <div id="voice-orb" class="relative w-32 h-32 rounded-full cursor-pointer flex items-center justify-center transition-all duration-500 shadow-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 border border-emerald-400/40 hover:scale-105 active:scale-95">
+        <svg id="mic-icon" class="w-10 h-10 text-white transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+        </svg>
+      </div>
+    </div>
+
+    <!-- Live Status / Mode Text -->
+    <div class="mb-4">
+      <p id="orb-status" class="text-sm font-medium tracking-wide uppercase text-emerald-400/90 transition-colors">
+        Click to Connect Audio
+      </p>
+      <p class="text-xs text-slate-500 mt-1">or hold <kbd class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded border border-slate-700 text-[10px]">Spacebar</kbd> to talk</p>
+    </div>
+
+    <!-- Live Transcript Box -->
+    <div class="w-full bg-darkcard/70 backdrop-blur border border-slate-800/80 rounded-2xl p-4 min-h-[90px] flex flex-col justify-center my-4 transition-all">
+      <p id="transcript-label" class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Live Transcript</p>
+      <p id="transcript-text" class="text-sm text-slate-300 italic">
+        "Say: 'Ali ko WhatsApp pe bolo kal meeting hai'..."
+      </p>
+    </div>
+
+    <!-- WhatsApp Action Card (Reveals on action execution) -->
+    <div id="action-card" class="w-full bg-emerald-950/30 border border-emerald-500/30 rounded-2xl p-4 text-left hidden transition-all">
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center gap-2">
+          <span class="text-base">💬</span>
+          <span class="text-xs font-semibold text-emerald-400 uppercase tracking-wider">WhatsApp Action</span>
+        </div>
+        <span id="action-status" class="text-[11px] font-medium bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full">Sent</span>
+      </div>
+      <div class="text-xs text-slate-400">Recipient: <strong id="action-contact" class="text-slate-200">Hamza</strong></div>
+      <div id="action-message" class="text-sm text-slate-200 mt-1 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800">
+        "Main 10 minute mein pohanch raha hoon."
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="w-full max-w-xl mx-auto px-6 py-4 text-center text-xs text-slate-600 border-t border-slate-800/60">
+    Kabootar.ai &bull; Powered by Pipecat, Whisper & Playwright
+  </footer>
+
+  <!-- Frontend Scripts -->
+  <script src="/static/js/audio.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+/* Custom Keyframe Animations for Kabootar.ai Orb */
+
+@keyframes orbPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 25px rgba(16, 185, 129, 0.4);
+  }
+  50% {
+    transform: scale(1.08);
+    box-shadow: 0 0 45px rgba(16, 185, 129, 0.7);
+  }
+}
+
+@keyframes orbListening {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 35px rgba(99, 102, 241, 0.6);
+  }
+  50% {
+    transform: scale(1.12);
+    box-shadow: 0 0 65px rgba(99, 102, 241, 0.9);
+  }
+}
+
+@keyframes orbSpeaking {
+  0% {
+    transform: scale(0.98);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.06);
+    filter: brightness(1.25);
+  }
+  100% {
+    transform: scale(0.98);
+    filter: brightness(1);
+  }
+}
+
+/* Orb Active State Classes */
+.orb-idle {
+  background: linear-gradient(135deg, #10b981, #0d9488);
+}
+
+.orb-listening {
+  animation: orbListening 1.5s infinite ease-in-out;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+  border-color: rgba(167, 139, 250, 0.6) !important;
+}
+
+.orb-speaking {
+  animation: orbSpeaking 1.2s infinite ease-in-out;
+  background: linear-gradient(135deg, #10b981, #3b82f6) !important;
+  border-color: rgba(52, 211, 153, 0.7) !important;
+}
+
+.orb-executing {
+  animation: spinSlow 3s linear infinite;
+  background: linear-gradient(135deg, #f59e0b, #ef4444) !important;
+}
+
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
