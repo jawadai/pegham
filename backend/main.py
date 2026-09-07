@@ -12,30 +12,50 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from backend.config import settings
+import asyncio
+import urllib.parse
+from typing import Set
+from pydantic import BaseModel
 from backend.utils.logger import logger
 from backend.services.whatsapp import whatsapp_service
+from backend.services.ai_service import ai_service
+
+# Active WebSocket connections for broadcasting UI updates
+active_connections: Set[WebSocket] = set()
+
+
+async def broadcast_event(event: dict):
+    for ws in list(active_connections):
+        try:
+            await ws.send_json(event)
+        except Exception:
+            active_connections.discard(ws)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
     Lifecycle manager for application startup and shutdown.
+    Automatically initializes WhatsApp Web using persistent session.
     """
     logger.info("💌 Starting Pegham.ai Server...")
-    # Optional background initialization of services
+    # Launch WhatsApp Web service in background task so server startup isn't blocked
+    whatsapp_task = asyncio.create_task(whatsapp_service.initialize())
     yield
     logger.info("Shutting down Pegham.ai Server...")
+    if not whatsapp_task.done():
+        whatsapp_task.cancel()
     await whatsapp_service.close()
 
 
 app = FastAPI(
     title="Pegham.ai API",
-    description="Voice-First WhatsApp Copilot powered by Pipecat & Playwright",
+    description="Voice-First WhatsApp Copilot powered by Pipecat, Groq & Playwright",
     version="0.1.0",
     lifespan=lifespan
 )
@@ -45,15 +65,21 @@ FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
 DOCS_DIR = Path(__file__).parent.parent / "docs"
 
 
+class ChatRequest(BaseModel):
+    text: str
+
+
 @app.get("/api/health")
 async def health_check():
     """
-    Basic health check endpoint.
+    Basic health check endpoint reporting WhatsApp readiness.
     """
     return {
         "status": "healthy",
         "app": "Pegham.ai",
-        "whatsapp_ready": whatsapp_service.is_ready
+        "whatsapp_ready": whatsapp_service.is_ready,
+        "llm_provider": settings.active_llm_provider,
+        "tts_provider": settings.TTS_PROVIDER
     }
 
 
@@ -63,14 +89,128 @@ async def websocket_events(websocket: WebSocket):
     WebSocket channel to stream real-time UI events (Orb status, WhatsApp actions, transcripts).
     """
     await websocket.accept()
+    active_connections.add(websocket)
     logger.info("Frontend WebSocket connected.")
     try:
+        # Send initial status
+        await websocket.send_json({
+            "type": "STATUS",
+            "whatsapp_ready": whatsapp_service.is_ready
+        })
         while True:
             data = await websocket.receive_text()
-            # Echo or process incoming client commands
+            # Keepalive / echo
             await websocket.send_json({"type": "ACK", "payload": data})
     except WebSocketDisconnect:
+        active_connections.discard(websocket)
         logger.info("Frontend WebSocket disconnected.")
+
+
+@app.post("/api/voice/process")
+async def process_voice_audio(request: Request):
+    """
+    Complete Voice-to-Action pipeline:
+    1. Audio -> Groq Whisper Large-v3 STT
+    2. Transcript -> Groq LLaMA 3.3 70B with tools
+    3. Tool -> WhatsApp Web Playwright action
+    4. Response -> Edge-TTS Urdu Voice
+    """
+    import base64
+    try:
+        content_type = request.headers.get("content-type", "")
+        if "application/json" in content_type:
+            payload = await request.json()
+            audio_b64 = payload.get("audio", "")
+            if not audio_b64:
+                raise HTTPException(status_code=400, detail="Missing audio in JSON")
+            audio_bytes = base64.b64decode(audio_b64)
+        else:
+            audio_bytes = await request.body()
+
+        if not audio_bytes:
+            raise HTTPException(status_code=400, detail="Empty audio payload")
+
+        await broadcast_event({"type": "STATE_CHANGE", "state": "executing"})
+
+        # 1. Transcribe audio with Groq Whisper
+        transcript = await ai_service.transcribe_audio(
+            audio_bytes=audio_bytes,
+            filename="audio.webm"
+        )
+        await broadcast_event({"type": "TRANSCRIPT", "text": transcript})
+
+        # 2. Process instruction with Groq LLaMA 3.3 70B & execute tools
+        result = await ai_service.process_instruction(transcript)
+
+        # 3. Broadcast WhatsApp action if executed
+        action = result.get("action")
+        if action and action.get("tool") == "send_whatsapp_message":
+            args = action.get("arguments", {})
+            res = action.get("result", {})
+            await broadcast_event({
+                "type": "WHATSAPP_ACTION",
+                "contact": args.get("contact_name", "Contact"),
+                "message": args.get("message", ""),
+                "status": "Sent" if res.get("success") else "Failed",
+                "spoken_response": result.get("spoken_response")
+            })
+
+        # 4. Broadcast spoken response
+        spoken = result.get("spoken_response", "")
+        if spoken:
+            await broadcast_event({"type": "SPEAK", "text": spoken})
+
+        audio_url = f"/api/tts?text={urllib.parse.quote(spoken)}" if spoken else ""
+        return {
+            "transcript": transcript,
+            "spoken_response": spoken,
+            "action": action,
+            "audio_url": audio_url
+        }
+
+    except Exception as e:
+        logger.error(f"Voice processing pipeline failed: {e}")
+        await broadcast_event({"type": "STATE_CHANGE", "state": "idle"})
+        return {"error": str(e), "transcript": "", "spoken_response": "Maazrat, awaaz samajh nahi aayi. Dobara kahiye."}
+
+
+@app.post("/api/chat")
+async def process_text_chat(req: ChatRequest):
+    """
+    Direct text chat endpoint for testing commands without speaking.
+    """
+    text = req.text.strip()
+    if not text:
+        return {"error": "Empty text"}
+
+    await broadcast_event({"type": "TRANSCRIPT", "text": text})
+    await broadcast_event({"type": "STATE_CHANGE", "state": "executing"})
+
+    result = await ai_service.process_instruction(text)
+
+    action = result.get("action")
+    if action and action.get("tool") == "send_whatsapp_message":
+        args = action.get("arguments", {})
+        res = action.get("result", {})
+        await broadcast_event({
+            "type": "WHATSAPP_ACTION",
+            "contact": args.get("contact_name", "Contact"),
+            "message": args.get("message", ""),
+            "status": "Sent" if res.get("success") else "Failed",
+            "spoken_response": result.get("spoken_response")
+        })
+
+    spoken = result.get("spoken_response", "")
+    if spoken:
+        await broadcast_event({"type": "SPEAK", "text": spoken})
+
+    audio_url = f"/api/tts?text={urllib.parse.quote(spoken)}" if spoken else ""
+    return {
+        "transcript": text,
+        "spoken_response": spoken,
+        "action": action,
+        "audio_url": audio_url
+    }
 
 
 # Serve index.html at root

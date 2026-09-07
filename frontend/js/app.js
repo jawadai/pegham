@@ -1,6 +1,6 @@
 /**
  * Main Frontend Application Script for Pegham.ai
- * Handles WebSocket events, Orb animation states, and UI updates.
+ * Handles WebSocket events, Orb animation states, Voice Recording, and WhatsApp Actions.
  */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -10,11 +10,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const actionCard = document.getElementById("action-card");
   const actionContact = document.getElementById("action-contact");
   const actionMessage = document.getElementById("action-message");
+  const actionStatus = document.getElementById("action-status");
   const statusDot = document.getElementById("status-dot");
   const statusText = document.getElementById("status-text");
+  const textInput = document.getElementById("text-input");
+  const textSendBtn = document.getElementById("text-send-btn");
 
   let ws = null;
-  let isListening = false;
+  let isRecordingActive = false;
 
   // Initialize WebSocket for real-time events
   function initWebSocket() {
@@ -48,16 +51,20 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const res = await fetch("/api/health");
       const data = await res.json();
-      if (data.whatsapp_ready) {
-        statusDot.className = "w-2 h-2 rounded-full bg-emerald-400";
-        statusText.textContent = "WhatsApp Ready";
-      } else {
-        statusDot.className = "w-2 h-2 rounded-full bg-amber-400 animate-pulse";
-        statusText.textContent = "WhatsApp Idle";
-      }
+      updateStatusBadge(data.whatsapp_ready);
     } catch (e) {
-      statusDot.className = "w-2 h-2 rounded-full bg-red-400";
+      statusDot.className = "w-2 h-2 rounded-full bg-red-500";
       statusText.textContent = "Server Offline";
+    }
+  }
+
+  function updateStatusBadge(isReady) {
+    if (isReady) {
+      statusDot.className = "w-2 h-2 rounded-full bg-emerald-400";
+      statusText.textContent = "WhatsApp Ready";
+    } else {
+      statusDot.className = "w-2 h-2 rounded-full bg-amber-400 animate-pulse";
+      statusText.textContent = "Connecting WhatsApp...";
     }
   }
 
@@ -82,15 +89,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Handle events emitted from backend
   function handleServerEvent(event) {
-    if (event.type === "STATE_CHANGE") {
+    if (event.type === "STATUS") {
+      updateStatusBadge(event.whatsapp_ready);
+    } else if (event.type === "STATE_CHANGE") {
       setOrbState(event.state); // 'idle', 'listening', 'speaking', 'executing'
     } else if (event.type === "TRANSCRIPT") {
       transcriptText.textContent = `"${event.text}"`;
     } else if (event.type === "WHATSAPP_ACTION") {
       showActionCard(event.contact, event.message, event.status);
-      if (event.status === "Sent") {
-        playSpokenAudio(event.spoken_response || `${event.contact} ko message bhej diya hai!`);
-      }
     } else if (event.type === "SPEAK") {
       playSpokenAudio(event.text);
     }
@@ -101,16 +107,16 @@ document.addEventListener("DOMContentLoaded", () => {
     voiceOrb.className = "relative w-32 h-32 rounded-full cursor-pointer flex items-center justify-center transition-all duration-500 shadow-2xl border ";
     if (state === "listening") {
       voiceOrb.classList.add("orb-listening");
-      orbStatus.textContent = "Listening...";
-      orbStatus.className = "text-sm font-medium tracking-wide uppercase text-indigo-400";
+      orbStatus.textContent = "Listening... (Tap Orb again to finish)";
+      orbStatus.className = "text-sm font-medium tracking-wide uppercase text-indigo-400 animate-pulse";
     } else if (state === "speaking") {
       voiceOrb.classList.add("orb-speaking");
       orbStatus.textContent = "Pegham is speaking...";
       orbStatus.className = "text-sm font-medium tracking-wide uppercase text-emerald-400";
     } else if (state === "executing") {
       voiceOrb.classList.add("orb-executing");
-      orbStatus.textContent = "Sending WhatsApp message...";
-      orbStatus.className = "text-sm font-medium tracking-wide uppercase text-amber-400";
+      orbStatus.textContent = "Processing & executing...";
+      orbStatus.className = "text-sm font-medium tracking-wide uppercase text-amber-400 animate-pulse";
     } else {
       voiceOrb.classList.add("orb-idle");
       orbStatus.textContent = "Tap or Hold Spacebar to Talk";
@@ -119,41 +125,146 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function showActionCard(contact, message, status) {
-    actionContact.textContent = contact;
-    actionMessage.textContent = `"${message}"`;
+    actionContact.textContent = contact || "Contact";
+    actionMessage.textContent = `"${message || ""}"`;
+    if (status === "Sent") {
+      actionStatus.className = "text-[11px] font-medium bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full";
+      actionStatus.textContent = "Sent";
+    } else {
+      actionStatus.className = "text-[11px] font-medium bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded-full";
+      actionStatus.textContent = status || "Failed";
+    }
     actionCard.classList.remove("hidden");
+  }
+
+  // Start Voice Recording
+  async function startRecording() {
+    try {
+      await window.audioController.startRecording();
+      isRecordingActive = true;
+      setOrbState("listening");
+    } catch (err) {
+      alert("Microphone permission required to use voice input.");
+      setOrbState("idle");
+      isRecordingActive = false;
+    }
+  }
+
+  // Stop Voice Recording and Process via Backend
+  async function stopAndProcessRecording() {
+    if (!isRecordingActive) return;
+    isRecordingActive = false;
+    setOrbState("executing");
+
+    try {
+      const audioBlob = await window.audioController.stopRecording();
+      if (!audioBlob || audioBlob.size < 1000) {
+        setOrbState("idle");
+        return;
+      }
+
+      transcriptText.textContent = "Listening recognized... Thinking with LLaMA 3.3 70B...";
+      const result = await window.audioController.processVoice(audioBlob);
+
+      if (result) {
+        if (result.transcript) {
+          transcriptText.textContent = `"${result.transcript}"`;
+        }
+        if (result.action && result.action.tool === "send_whatsapp_message") {
+          const args = result.action.arguments || {};
+          const res = result.action.result || {};
+          showActionCard(args.contact_name, args.message, res.success ? "Sent" : "Failed");
+        }
+        if (result.spoken_response) {
+          playSpokenAudio(result.spoken_response);
+        } else {
+          setOrbState("idle");
+        }
+      } else {
+        setOrbState("idle");
+      }
+    } catch (err) {
+      console.error("Error processing voice:", err);
+      transcriptText.textContent = "Error processing voice. Please try again.";
+      setOrbState("idle");
+    }
   }
 
   // Toggle audio stream on Orb click
   voiceOrb.addEventListener("click", async () => {
-    if (!window.audioController.isConnected) {
-      try {
-        await window.audioController.requestMicrophone();
-        setOrbState("listening");
-      } catch (err) {
-        alert("Please allow microphone permissions to use Pegham.ai.");
-      }
+    if (!isRecordingActive) {
+      await startRecording();
     } else {
-      setOrbState("idle");
+      await stopAndProcessRecording();
     }
   });
 
   // Spacebar Push-to-Talk Handler
-  window.addEventListener("keydown", (e) => {
+  window.addEventListener("keydown", async (e) => {
     if (e.code === "Space" && !e.repeat && document.activeElement.tagName !== "INPUT") {
       e.preventDefault();
-      setOrbState("listening");
+      if (!isRecordingActive) {
+        await startRecording();
+      }
     }
   });
 
-  window.addEventListener("keyup", (e) => {
+  window.addEventListener("keyup", async (e) => {
     if (e.code === "Space" && document.activeElement.tagName !== "INPUT") {
       e.preventDefault();
-      setOrbState("idle");
+      if (isRecordingActive) {
+        await stopAndProcessRecording();
+      }
     }
   });
+
+  // Direct Text Command Handler
+  async function sendTextCommand() {
+    if (!textInput) return;
+    const text = textInput.value.trim();
+    if (!text) return;
+
+    textInput.value = "";
+    setOrbState("executing");
+    transcriptText.textContent = `"${text}"`;
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text })
+      });
+      const data = await res.json();
+      if (data.action && data.action.tool === "send_whatsapp_message") {
+        const args = data.action.arguments || {};
+        const resObj = data.action.result || {};
+        showActionCard(args.contact_name, args.message, resObj.success ? "Sent" : "Failed");
+      }
+      if (data.spoken_response) {
+        playSpokenAudio(data.spoken_response);
+      } else {
+        setOrbState("idle");
+      }
+    } catch (err) {
+      console.error("Error sending text command:", err);
+      setOrbState("idle");
+    }
+  }
+
+  if (textSendBtn) {
+    textSendBtn.addEventListener("click", sendTextCommand);
+  }
+  if (textInput) {
+    textInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        sendTextCommand();
+      }
+    });
+  }
 
   // Initialize
   initWebSocket();
-  setInterval(checkHealth, 10000);
+  checkHealth();
+  setInterval(checkHealth, 5000);
 });
