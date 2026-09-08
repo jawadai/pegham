@@ -4,14 +4,17 @@ Integrates Groq Whisper Large-v3 (STT) + Groq LLaMA 3.3 70B (Brain & Tools).
 100% Free with zero cloud subscriptions.
 """
 
+import difflib
 import json
-from typing import Dict, Any, Optional
+import re
+from typing import Dict, Any, Optional, List
 from openai import AsyncOpenAI
 
 from backend.config import settings
 from backend.utils.logger import logger
-from backend.core.prompts import PEGHAM_SYSTEM_PROMPT
-from backend.core.tools import WHATSAPP_TOOLS, handle_tool_call
+from backend.core.prompts import build_pegham_system_prompt, PEGHAM_SYSTEM_PROMPT
+from backend.core.tools import get_whatsapp_tools, WHATSAPP_TOOLS, handle_tool_call
+from backend.services.whatsapp import whatsapp_service
 
 
 class AIService:
@@ -144,6 +147,45 @@ class AIService:
 
         raise last_error or RuntimeError("No accessible Groq chat models available.")
 
+    @staticmethod
+    def _resolve_contact_name(cname: str, known_contacts: List[str]) -> str:
+        """
+        Fuzzy and phonetic safety-net resolver for contact names.
+        Matches spoken/transcribed variations to real saved WhatsApp contacts.
+        """
+        if not cname or not known_contacts:
+            return cname
+
+        raw = cname.strip()
+        # Check for Urdu script
+        if any('\u0600' <= char <= '\u06FF' for char in raw):
+            if any(k in raw for k in ['ینگر', 'ینگ', 'سیلف']):
+                return "Younger Self"
+            for c in known_contacts:
+                if c in raw or raw in c:
+                    return c
+
+        clean_raw = re.sub(r'[^a-z0-9]', '', raw.lower())
+
+        # 1. Exact alphanumeric match (e.g. 'youngerself' -> 'Younger Self')
+        for c in known_contacts:
+            if clean_raw == re.sub(r'[^a-z0-9]', '', c.lower()):
+                return c
+
+        # 2. Substring match (e.g. 'younger' -> 'Younger Self', 'Sami' -> 'Malik Samikhan')
+        if len(clean_raw) >= 3:
+            for c in known_contacts:
+                c_clean = re.sub(r'[^a-z0-9]', '', c.lower())
+                if clean_raw in c_clean or (len(c_clean) >= 4 and c_clean in clean_raw):
+                    return c
+
+        # 3. Fuzzy similarity match (Levenshtein-based)
+        matches = difflib.get_close_matches(raw, known_contacts, n=1, cutoff=0.5)
+        if matches:
+            return matches[0]
+
+        return raw
+
     async def process_instruction(self, user_text: str) -> Dict[str, Any]:
         """
         Processes user text with Groq LLM Brain, dispatches tool calls,
@@ -156,13 +198,18 @@ class AIService:
 
         logger.info(f"🧠 Processing instruction with Groq: \"{user_text}\"")
 
+        # Dynamically ground prompt & tools with real WhatsApp directory
+        known_contacts = whatsapp_service.get_known_contact_names()
+        system_prompt = build_pegham_system_prompt(known_contacts)
+        tools = get_whatsapp_tools(known_contacts)
+
         messages = [
-            {"role": "system", "content": PEGHAM_SYSTEM_PROMPT},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_text}
         ]
 
         # 1. Call LLM with WhatsApp tools (with automatic model fallback)
-        response = await self._call_llm(messages=messages, tools=WHATSAPP_TOOLS)
+        response = await self._call_llm(messages=messages, tools=tools)
 
         response_message = response.choices[0].message
         action_result: Optional[Dict[str, Any]] = None
@@ -193,15 +240,13 @@ class AIService:
                 except Exception:
                     function_args = {}
 
-                # Normalization guard: If contact_name is in Urdu script or contains 'ینگر' / 'ینگ', normalize it to English
+                # Normalization guard: Resolve contact_name to exact known contact using dynamic directory
                 if "contact_name" in function_args:
                     cname = function_args["contact_name"].strip()
-                    if any('\u0600' <= char <= '\u06FF' for char in cname):
-                        if any(k in cname for k in ['ینگر', 'ینگ', 'سیلف']):
-                            function_args["contact_name"] = "Younger Self"
-                    # Also normalize variations of Younger self
-                    elif cname.lower() in ["younger self", "youngerself"]:
-                        function_args["contact_name"] = "Younger Self"
+                    resolved_name = self._resolve_contact_name(cname, known_contacts)
+                    if resolved_name != cname:
+                        logger.info(f"🎯 Resolved contact argument '{cname}' -> '{resolved_name}'")
+                    function_args["contact_name"] = resolved_name
 
                 logger.info(f"⚡ Executing Tool [{function_name}] with args: {function_args}")
                 tool_output = await handle_tool_call(function_name, function_args)

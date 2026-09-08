@@ -24,7 +24,73 @@ class WhatsAppService:
         self.page: Optional[Page] = None
         self.is_ready: bool = False
         self.contact_cache: Dict[str, str] = {}
+        self.contacts_file = self.session_dir / "contacts_cache.json"
+        self._load_contacts_from_file()
         self._lock = asyncio.Lock()
+
+    def _load_contacts_from_file(self):
+        """
+        Loads cached contact mappings from local disk so contacts are
+        instantly available on startup.
+        """
+        import json
+        if self.contacts_file.exists():
+            try:
+                with open(self.contacts_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    if isinstance(data, dict):
+                        self.contact_cache.update(data)
+                        logger.info(f"Loaded {len(data)} cached contacts from {self.contacts_file.name}")
+            except Exception as e:
+                logger.debug(f"Could not load contacts cache: {e}")
+
+    def _save_contacts_to_file(self):
+        """
+        Persists known contact mappings to local disk.
+        """
+        import json
+        try:
+            self.session_dir.mkdir(parents=True, exist_ok=True)
+            with open(self.contacts_file, "w", encoding="utf-8") as f:
+                json.dump(self.contact_cache, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            logger.debug(f"Could not save contacts cache: {e}")
+
+    def get_known_contact_names(self) -> List[str]:
+        """
+        Returns a list of clean, unique contact names currently known in the directory.
+        Filters out UI tabs, unread message badges, and status snippets.
+        Used to ground the LLM system prompt.
+        """
+        ignored_exact = {
+            "all", "unread", "favourites", "groups", "status", "chats",
+            "communities", "channels", "settings", "profile"
+        }
+        ignored_patterns = [
+            "unread message", "blocked this", "default timer",
+            "secure service", "click to learn"
+        ]
+        media_placeholders = {
+            "photo", "video", "audio", "document", "sticker", "gif",
+            "voice message", "location"
+        }
+
+        unique_names = set()
+        for real_name in self.contact_cache.values():
+            s = real_name.strip(" \t\n\r\u202a\u202b\u202c\u200e\u200f")
+            s_lower = s.lower()
+            if not s or len(s) < 2 or len(s) > 45:
+                continue
+            if s_lower in ignored_exact or s_lower in media_placeholders:
+                continue
+            if any(pat in s_lower for pat in ignored_patterns):
+                continue
+            unique_names.add(s)
+
+        # Pre-seed Younger Self if empty
+        if not unique_names:
+            unique_names.add("Younger Self")
+        return sorted(list(unique_names))
 
     def _clean_stale_locks(self):
         """
@@ -117,16 +183,15 @@ class WhatsAppService:
         try:
             titles = await self.page.evaluate("""() => {
                 const names = new Set();
-                const selectors = [
-                    "#pane-side span[title]",
-                    "#side span[title]",
-                    "div[role='listitem'] span[title]",
-                    "div[role='gridcell'] span[title]",
-                    "div[data-testid='cell-frame-title'] span"
-                ];
-                document.querySelectorAll(selectors.join(", ")).forEach(el => {
-                    const t = (el.getAttribute('title') || el.innerText || '').trim();
-                    if (t.length >= 2 && !t.includes(':') && !t.includes('/') && !t.includes('http')) {
+                const titleElements = document.querySelectorAll(
+                    "div[data-testid='cell-frame-title'] span, " +
+                    "#pane-side div[role='listitem'] div[data-testid='cell-frame-title'] span, " +
+                    "#pane-side div[role='row'] div[data-testid='cell-frame-title'] span"
+                );
+                titleElements.forEach(el => {
+                    let t = (el.getAttribute('title') || el.innerText || '').trim();
+                    t = t.replace(/[\\u202a\\u202b\\u202c\\u200e\\u200f]/g, '').trim();
+                    if (t.length >= 2 && t.length <= 45 && !t.includes(':') && !t.includes('http')) {
                         names.add(t);
                     }
                 });
@@ -134,11 +199,13 @@ class WhatsAppService:
             }""")
             if titles:
                 import re
+                ignored_exact = {"all", "unread", "favourites", "groups", "status", "chats"}
                 for title in titles:
                     clean_key = re.sub(r'[^a-z0-9]', '', title.lower())
-                    if clean_key:
+                    if clean_key and clean_key not in ignored_exact and "unreadmessage" not in clean_key:
                         self.contact_cache[clean_key] = title
                 logger.info(f"📋 WhatsApp Contact Cache updated ({len(self.contact_cache)} contacts recognized): {list(self.contact_cache.values())[:10]}")
+                self._save_contacts_to_file()
         except Exception as e:
             logger.debug(f"Could not refresh contact cache: {e}")
         return self.contact_cache
@@ -549,6 +616,7 @@ class WhatsAppService:
                     if clean_active:
                         self.contact_cache[clean_active] = active_title
                     logger.info(f"Associated in cache: '{contact_name}' -> '{active_title}'")
+                    self._save_contacts_to_file()
             except Exception:
                 pass
 
