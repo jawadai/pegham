@@ -103,6 +103,59 @@ class WhatsAppService:
                 self.is_ready = False
                 return False
 
+    @staticmethod
+    def _get_contact_search_variations(name: str) -> List[str]:
+        """
+        Generates smart search query variations for contact names.
+        e.g. 'Youngerself' -> ['Youngerself', 'Younger self', 'Younger']
+        e.g. 'Younger self' -> ['Younger self', 'Youngerself', 'Younger']
+        """
+        import re
+        variations = [name.strip()]
+        spaced = re.sub(r'([a-z])([A-Z])', r'\1 \2', name).strip()
+        if spaced not in variations:
+            variations.append(spaced)
+
+        cleaned = name.strip()
+        if " " not in cleaned:
+            lower = cleaned.lower()
+            for suffix in ["self", "khan", "bhai", "jan", "sb", "sahab"]:
+                if lower.endswith(suffix) and len(lower) > len(suffix) + 2:
+                    v_split = cleaned[:-len(suffix)].strip() + " " + cleaned[-len(suffix):].strip()
+                    if v_split not in variations:
+                        variations.append(v_split)
+                    v_base = cleaned[:-len(suffix)].strip()
+                    if v_base not in variations:
+                        variations.append(v_base)
+        else:
+            no_space = cleaned.replace(" ", "").strip()
+            if no_space not in variations:
+                variations.append(no_space)
+            first_word = cleaned.split()[0]
+            if len(first_word) >= 3 and first_word not in variations:
+                variations.append(first_word)
+
+        return variations
+
+    @staticmethod
+    def _is_contact_match(target: str, candidate_text: str) -> bool:
+        """
+        Fuzzy & space-insensitive contact name matching.
+        """
+        import re
+        t = target.strip().lower()
+        c = candidate_text.strip().lower()
+        if t in c or c in t:
+            return True
+        t_norm = re.sub(r'[^a-z0-9]', '', t)
+        c_norm = re.sub(r'[^a-z0-9]', '', c)
+        if t_norm and c_norm:
+            if t_norm in c_norm or c_norm in t_norm:
+                return True
+            if len(t_norm) >= 4 and len(c_norm) >= 4 and t_norm[:4] == c_norm[:4]:
+                return True
+        return False
+
     async def send_message(self, contact_name: str, message: str) -> Dict[str, Any]:
         """
         Searches for a contact/chat in WhatsApp Web and sends a message.
@@ -159,69 +212,79 @@ class WhatsAppService:
                 await self.page.keyboard.press("Control+Alt+/")
                 await asyncio.sleep(0.3)
 
-            # Thoroughly clear existing search query
-            try:
-                await self.page.evaluate("""() => {
-                    const el = document.querySelector("div[contenteditable='true'][data-tab='3'], #side div[contenteditable='true']");
-                    if (el) {
-                        el.focus();
-                        document.execCommand('selectAll', false, null);
-                        document.execCommand('delete', false, null);
-                    }
-                }""")
-            except Exception:
-                pass
-            await self.page.keyboard.press("Control+a")
-            await self.page.keyboard.press("Backspace")
-            await asyncio.sleep(0.2)
-
-            # Type recipient contact name
-            await self.page.keyboard.type(contact_name, delay=35)
-            await asyncio.sleep(1.2)
-
-            # Look for matching contact item in results
-            contact_clean = contact_name.strip()
-            chat_item = None
-
-            # 1. Exact/partial title match
-            chat_item = await self.page.query_selector(f"#pane-side span[title*='{contact_clean}' i]")
-            if not chat_item:
-                # 2. Text match inside listitem
-                chat_item = await self.page.query_selector(f"#pane-side div[role='listitem'] span[dir='auto']:has-text('{contact_clean}')")
-            if not chat_item:
-                # 3. Check text content of search result items
-                items = await self.page.query_selector_all("#pane-side div[role='listitem']")
-                for it in items[:6]:
-                    txt = await it.inner_text()
-                    if contact_clean.lower() in txt.lower():
-                        chat_item = it
-                        break
-
-            if chat_item:
-                await chat_item.click()
-                await asyncio.sleep(1.0)
-            else:
-                # Fallback: Press Enter on the search result
-                await self.page.keyboard.press("Enter")
-                await asyncio.sleep(1.0)
-
-            # 2. Fast combined lookup for message compose input box
+            # 2. Search for recipient using query variations
+            search_variations = self._get_contact_search_variations(contact_name)
+            chat_opened = False
+            compose_box = None
             compose_selectors = (
                 "#main footer div[contenteditable='true']",
+                "#main div[data-lexical-editor='true']",
+                "#main div[aria-label='Type a message']",
+                "#main div[contenteditable='true'][data-tab='10']",
                 "footer div[contenteditable='true']",
-                "div[data-lexical-editor='true']",
-                "div[aria-label='Type a message']",
-                "div[role='textbox'][contenteditable='true']",
-                "div[contenteditable='true'][data-tab='10']"
+                "div[data-lexical-editor='true']"
             )
 
-            try:
-                compose_box = await self.page.wait_for_selector(compose_selectors, timeout=5000)
-            except Exception:
-                compose_box = None
+            for query_variant in search_variations:
+                logger.info(f"🔎 Searching WhatsApp contact with query: '{query_variant}'...")
 
-            if not compose_box or not await compose_box.is_visible():
-                logger.warning(f"Could not open active chat for '{contact_name}'.")
+                # Clear search input
+                if search_box:
+                    try:
+                        await search_box.click()
+                        await asyncio.sleep(0.1)
+                    except Exception:
+                        pass
+                try:
+                    await self.page.evaluate("""() => {
+                        const el = document.querySelector("div[contenteditable='true'][data-tab='3'], #side div[contenteditable='true']");
+                        if (el) {
+                            el.focus();
+                            document.execCommand('selectAll', false, null);
+                            document.execCommand('delete', false, null);
+                        }
+                    }""")
+                except Exception:
+                    pass
+                await self.page.keyboard.press("Control+a")
+                await self.page.keyboard.press("Backspace")
+                await asyncio.sleep(0.2)
+
+                # Type search query
+                await self.page.keyboard.type(query_variant, delay=35)
+                await asyncio.sleep(1.2)
+
+                # Look for matching contact item in results
+                chat_item = None
+                items = await self.page.query_selector_all("#pane-side div[role='listitem'], #pane-side div[role='row']")
+                for it in items[:8]:
+                    txt = await it.inner_text()
+                    if self._is_contact_match(contact_name, txt) or self._is_contact_match(query_variant, txt):
+                        chat_item = it
+                        logger.info(f"🎯 Matched contact item in WhatsApp: '{txt.splitlines()[0]}'")
+                        break
+
+                if chat_item:
+                    await chat_item.click()
+                    await asyncio.sleep(1.0)
+                elif items:
+                    # ArrowDown then Enter to select first search result
+                    await self.page.keyboard.press("ArrowDown")
+                    await asyncio.sleep(0.3)
+                    await self.page.keyboard.press("Enter")
+                    await asyncio.sleep(1.0)
+
+                # Check if compose box is now active
+                try:
+                    compose_box = await self.page.wait_for_selector(compose_selectors, timeout=4000)
+                    if compose_box and await compose_box.is_visible():
+                        chat_opened = True
+                        break
+                except Exception:
+                    pass
+
+            if not chat_opened or not compose_box or not await compose_box.is_visible():
+                logger.warning(f"Could not open active chat for '{contact_name}' after trying variations {search_variations}.")
                 await self.page.keyboard.press("Escape")
                 return {
                     "success": False,

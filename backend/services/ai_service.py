@@ -51,7 +51,7 @@ class AIService:
             transcription = await self.client.audio.transcriptions.create(
                 file=(filename, audio_bytes, "audio/webm"),
                 model="whisper-large-v3",
-                prompt="Pakistani Urdu, Roman Urdu, English conversational voice input for Pegham WhatsApp assistant.",
+                prompt="Pakistani Urdu, Roman Urdu, English, WhatsApp contact names like Youngerself, Ali, Emaan, Hamza, WhatsApp voice commands.",
                 response_format="text",
                 temperature=0.0
             )
@@ -192,6 +192,16 @@ class AIService:
                     function_args = json.loads(tool_call.function.arguments)
                 except Exception:
                     function_args = {}
+
+                # Normalization guard: If contact_name is in Urdu script or contains 'ینگر' / 'ینگ', normalize it to English
+                if "contact_name" in function_args:
+                    cname = function_args["contact_name"].strip()
+                    if any('\u0600' <= char <= '\u06FF' for char in cname):
+                        if any(k in cname for k in ['ینگر', 'ینگ', 'سیلف']):
+                            function_args["contact_name"] = "Youngerself"
+                    # Also normalize variations of Younger self
+                    elif cname.lower() in ["younger self", "youngerself", "youngerself"]:
+                        function_args["contact_name"] = "Youngerself"
 
                 logger.info(f"⚡ Executing Tool [{function_name}] with args: {function_args}")
                 tool_output = await handle_tool_call(function_name, function_args)
