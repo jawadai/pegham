@@ -257,15 +257,18 @@ class WhatsAppService:
         logger.info(f"📨 Attempting to send WhatsApp message to '{contact_name}': \"{message}\"")
         try:
             chat_opened = False
-            compose_box = None
             compose_selectors = (
-                "#main footer div[contenteditable='true']",
-                "#main div[data-lexical-editor='true']",
-                "#main div[aria-label='Type a message']",
-                "#main div[contenteditable='true'][data-tab='10']",
-                "footer div[contenteditable='true']",
-                "div[data-lexical-editor='true']"
+                "#main footer div[contenteditable='true'], "
+                "#main div[data-lexical-editor='true'], "
+                "#main div[aria-label='Type a message'], "
+                "#main div[contenteditable='true'][data-tab='10'], "
+                "#main footer div[role='textbox'], "
+                "footer div[contenteditable='true'], "
+                "div[data-lexical-editor='true'], "
+                "footer div[role='textbox']"
             )
+            if isinstance(compose_selectors, (list, tuple)):
+                compose_selectors = ", ".join(compose_selectors)
 
             # Check if target chat is already actively open in #main header
             try:
@@ -428,13 +431,23 @@ class WhatsAppService:
                                         await drawer_items[0].click()
                                         await asyncio.sleep(1.2)
 
-                                compose_box = await self.page.wait_for_selector(compose_selectors, timeout=4000)
-                                if compose_box and await compose_box.is_visible():
-                                    chat_opened = True
+                                try:
+                                    compose_box = await self.page.wait_for_selector(compose_selectors, timeout=5000)
+                                    if compose_box and await compose_box.is_visible():
+                                        chat_opened = True
+                                except Exception:
+                                    compose_box = await self.page.query_selector(compose_selectors)
+                                    if compose_box and await compose_box.is_visible():
+                                        chat_opened = True
                         except Exception as e:
                             logger.warning(f"New chat drawer attempt failed: {e}")
 
-            if not chat_opened or not compose_box or not await compose_box.is_visible():
+            if not chat_opened:
+                compose_box = await self.page.query_selector(compose_selectors)
+                if compose_box and await compose_box.is_visible():
+                    chat_opened = True
+
+            if not chat_opened or not compose_box:
                 logger.warning(f"Could not open active chat for '{contact_name}' after trying variations {search_variations}.")
                 await self.page.keyboard.press("Escape")
                 return {
