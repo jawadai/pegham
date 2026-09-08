@@ -57,6 +57,7 @@ class WhatsAppService:
                 self.browser_context = await self.playwright.chromium.launch_persistent_context(
                     user_data_dir=str(self.session_dir),
                     headless=self.headless,
+                    user_agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
                     args=[
                         "--no-sandbox",
                         "--disable-setuid-sandbox",
@@ -256,7 +257,26 @@ class WhatsAppService:
 
                 # Look for matching contact item in results
                 chat_item = None
-                items = await self.page.query_selector_all("#pane-side div[role='listitem'], #pane-side div[role='row']")
+                items = await self.page.query_selector_all(
+                    "#side div[role='listitem'], "
+                    "#side div[role='row'], "
+                    "div[data-testid='cell-frame-container'], "
+                    "#pane-side div[role='listitem'], "
+                    "div[aria-label='Search results.'] div[role='listitem']"
+                )
+
+                found_names = []
+                for it in items[:10]:
+                    try:
+                        txt = await it.inner_text()
+                        if txt:
+                            first_line = txt.splitlines()[0].strip()
+                            if first_line and first_line not in found_names:
+                                found_names.append(first_line)
+                    except Exception:
+                        pass
+                logger.info(f"Contacts/Chats found for '{query_variant}': {found_names}")
+
                 for it in items[:8]:
                     txt = await it.inner_text()
                     if self._is_contact_match(contact_name, txt) or self._is_contact_match(query_variant, txt):
@@ -266,13 +286,17 @@ class WhatsAppService:
 
                 if chat_item:
                     await chat_item.click()
-                    await asyncio.sleep(1.0)
+                    await asyncio.sleep(1.2)
                 elif items:
-                    # ArrowDown then Enter to select first search result
-                    await self.page.keyboard.press("ArrowDown")
-                    await asyncio.sleep(0.3)
-                    await self.page.keyboard.press("Enter")
-                    await asyncio.sleep(1.0)
+                    # Click top search result item directly
+                    try:
+                        await items[0].click()
+                        await asyncio.sleep(1.2)
+                    except Exception:
+                        await self.page.keyboard.press("ArrowDown")
+                        await asyncio.sleep(0.3)
+                        await self.page.keyboard.press("Enter")
+                        await asyncio.sleep(1.0)
 
                 # Check if compose box is now active
                 try:
@@ -282,6 +306,44 @@ class WhatsAppService:
                         break
                 except Exception:
                     pass
+
+            # Fallback: Try "New chat" address book drawer if main search didn't open chat
+            if not chat_opened:
+                logger.info(f"Main search did not open chat for '{contact_name}'. Trying 'New chat' address book drawer...")
+                new_chat_btn = await self.page.query_selector("button[aria-label='New chat'], span[data-icon='chat'], #side header [data-icon='chat']")
+                if new_chat_btn:
+                    try:
+                        await new_chat_btn.click()
+                        await asyncio.sleep(0.8)
+
+                        drawer_input = await self.page.query_selector("div[contenteditable='true'], div[aria-label='Search input text'], #side [contenteditable='true']")
+                        if drawer_input:
+                            await drawer_input.click()
+                            await self.page.keyboard.type(contact_name, delay=35)
+                            await asyncio.sleep(1.5)
+
+                            drawer_items = await self.page.query_selector_all("#side div[role='listitem'], div[role='listitem']")
+                            drawer_names = []
+                            for it in drawer_items[:8]:
+                                txt = await it.inner_text()
+                                if txt:
+                                    drawer_names.append(txt.splitlines()[0].strip())
+                                if self._is_contact_match(contact_name, txt):
+                                    logger.info(f"🎯 Matched contact in New Chat drawer: '{txt.splitlines()[0]}'")
+                                    await it.click()
+                                    await asyncio.sleep(1.2)
+                                    break
+                            else:
+                                if drawer_items:
+                                    logger.info(f"Clicking top result in New Chat drawer: '{drawer_names[0] if drawer_names else 'first'}'")
+                                    await drawer_items[0].click()
+                                    await asyncio.sleep(1.2)
+
+                            compose_box = await self.page.wait_for_selector(compose_selectors, timeout=4000)
+                            if compose_box and await compose_box.is_visible():
+                                chat_opened = True
+                    except Exception as e:
+                        logger.warning(f"New chat drawer attempt failed: {e}")
 
             if not chat_opened or not compose_box or not await compose_box.is_visible():
                 logger.warning(f"Could not open active chat for '{contact_name}' after trying variations {search_variations}.")
