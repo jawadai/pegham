@@ -65,53 +65,50 @@ class AIService:
     async def _get_active_groq_models(self) -> list:
         """
         Dynamically queries Groq's models endpoint to discover currently active chat models.
+        Filters out non-chat, non-tool, and special audio/guard models.
         """
         try:
             res = await self.client.models.list()
             active_ids = [m.id for m in res.data]
-            logger.info(f"📋 Live Groq Models available on account: {active_ids}")
+            excluded_keywords = [
+                "whisper", "embed", "tts", "guard", "safeguard",
+                "vision", "moderation", "orpheus", "compound", "allam"
+            ]
             chat_models = [
                 mid for mid in active_ids
-                if not any(x in mid.lower() for x in ["whisper", "embed", "tts", "guard", "safeguard", "vision", "moderation"])
+                if not any(x in mid.lower() for x in excluded_keywords)
             ]
             return chat_models
         except Exception as e:
-            logger.warning(f"Could not dynamically list Groq models: {e}")
+            logger.debug(f"Dynamic Groq model lookup skipped: {e}")
             return []
 
     async def _call_llm(self, messages: list, tools: Optional[list] = None):
         """
-        Calls Groq chat completions with automatic dynamic discovery and fallback.
+        Calls Groq chat completions with verified models and automatic resilient fallback.
         """
-        # Dynamic discovery from Groq API
-        discovered_models = await self._get_active_groq_models()
-
-        candidate_models = []
-        if settings.GROQ_LLM_MODEL:
-            candidate_models.append(settings.GROQ_LLM_MODEL)
-        candidate_models.extend(discovered_models)
-        candidate_models.extend([
-            "llama-3.1-8b-instant",
+        # Verified models supporting tool-calling on Groq
+        priority_models = [
+            settings.GROQ_LLM_MODEL or "openai/gpt-oss-20b",
             "openai/gpt-oss-20b",
             "openai/gpt-oss-120b",
-            "qwen/qwen3.6-27b",
-            "llama3-8b-8192",
-            "llama3-70b-8192"
-        ])
+            "qwen/qwen3.8-27b",
+        ]
 
-        # De-duplicate while preserving priority order
-        models = []
-        for m in candidate_models:
-            if m and m not in models:
-                models.append(m)
+        discovered = await self._get_active_groq_models()
+        candidate_models = []
+        for m in priority_models + discovered:
+            if m and m not in candidate_models:
+                candidate_models.append(m)
 
         last_error = None
-        for model_name in models:
+        for model_name in candidate_models:
             try:
                 kwargs: Dict[str, Any] = {
                     "model": model_name,
                     "messages": messages,
-                    "temperature": 0.3
+                    "temperature": 0.3,
+                    "max_tokens": 600,
                 }
                 if tools:
                     kwargs["tools"] = tools
@@ -130,12 +127,17 @@ class AIService:
                         "decommissioned",
                         "does not exist",
                         "no longer supported",
+                        "not supported with this model",
+                        "terms acceptance",
+                        "model_terms_required",
+                        "rate_limit",
+                        "429",
                         "404",
                         "400"
                     ]
                 )
                 if is_model_error:
-                    logger.warning(f"Groq model '{model_name}' rejected ({e}). Trying next fallback model...")
+                    logger.warning(f"Groq model '{model_name}' unavailable ({e}). Trying next fallback model...")
                     last_error = e
                     continue
                 raise e

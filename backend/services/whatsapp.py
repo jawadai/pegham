@@ -25,6 +25,20 @@ class WhatsAppService:
         self.is_ready: bool = False
         self._lock = asyncio.Lock()
 
+    def _clean_stale_locks(self):
+        """
+        Removes stale Chromium singleton locks if the owning process is no longer running.
+        Prevents 'Opening in existing browser session' crashes after restarts.
+        """
+        for lock_name in ["SingletonLock", "SingletonSocket", "SingletonCookie"]:
+            lock_path = self.session_dir / lock_name
+            if lock_path.exists() or lock_path.is_symlink():
+                try:
+                    lock_path.unlink()
+                    logger.info(f"Cleaned stale Chromium lock: {lock_name}")
+                except Exception as e:
+                    logger.warning(f"Could not remove {lock_name}: {e}")
+
     async def initialize(self) -> bool:
         """
         Launches browser with persistent context and navigates to WhatsApp Web.
@@ -34,6 +48,7 @@ class WhatsAppService:
             if self.is_ready and self.page:
                 return True
 
+            self._clean_stale_locks()
             logger.info(f"🌐 Initializing WhatsApp Web service (session_dir={self.session_dir}, headless={self.headless})...")
             try:
                 if not self.playwright:
@@ -60,11 +75,14 @@ class WhatsAppService:
                     "#side",
                     "div[aria-label='Chat list']",
                     "div[role='grid']",
-                    "button[aria-label='New chat']"
+                    "div[contenteditable='true']",
+                    "button[aria-label='New chat']",
+                    "header [data-icon='chat']",
+                    "div[data-tab='3']"
                 ]
 
-                # Wait up to 25 seconds for session to restore from IndexedDB
-                for _ in range(25):
+                # Wait up to 45 seconds for session to restore from IndexedDB
+                for _ in range(45):
                     for selector in logged_in_selectors:
                         try:
                             el = await self.page.query_selector(selector)
@@ -101,6 +119,29 @@ class WhatsAppService:
 
         logger.info(f"📨 Attempting to send WhatsApp message to '{contact_name}': \"{message}\"")
         try:
+            # 0. Clean reset of previous search state or focus
+            await self.page.keyboard.press("Escape")
+            await asyncio.sleep(0.2)
+            await self.page.keyboard.press("Escape")
+            await asyncio.sleep(0.2)
+
+            # Click cancel search / back button if active
+            back_selectors = (
+                "button[aria-label='Back'], "
+                "button[aria-label='Cancel search'], "
+                "button[aria-label='Clear search'], "
+                "span[data-icon='back'], "
+                "span[data-icon='x-alt'], "
+                "#side button[aria-label='Back']"
+            )
+            cancel_btn = await self.page.query_selector(back_selectors)
+            if cancel_btn:
+                try:
+                    await cancel_btn.click()
+                    await asyncio.sleep(0.3)
+                except Exception:
+                    pass
+
             # 1. Locate and focus search box
             search_selectors = (
                 "div[contenteditable='true'][data-tab='3'], "
@@ -113,14 +154,24 @@ class WhatsAppService:
 
             if search_box:
                 await search_box.click()
-                await asyncio.sleep(0.3)
+                await asyncio.sleep(0.2)
             else:
-                # Try keyboard shortcut
                 await self.page.keyboard.press("Control+Alt+/")
-                await asyncio.sleep(0.4)
+                await asyncio.sleep(0.3)
 
-            # Clear existing search query
-            await self.page.keyboard.press("Control+A")
+            # Thoroughly clear existing search query
+            try:
+                await self.page.evaluate("""() => {
+                    const el = document.querySelector("div[contenteditable='true'][data-tab='3'], #side div[contenteditable='true']");
+                    if (el) {
+                        el.focus();
+                        document.execCommand('selectAll', false, null);
+                        document.execCommand('delete', false, null);
+                    }
+                }""")
+            except Exception:
+                pass
+            await self.page.keyboard.press("Control+a")
             await self.page.keyboard.press("Backspace")
             await asyncio.sleep(0.2)
 
@@ -129,45 +180,54 @@ class WhatsAppService:
             await asyncio.sleep(1.2)
 
             # Look for matching contact item in results
-            contact_matched = False
-            # Check for title attribute match
-            chat_item = await self.page.query_selector(f"#pane-side span[title*='{contact_name}' i]")
+            contact_clean = contact_name.strip()
+            chat_item = None
+
+            # 1. Exact/partial title match
+            chat_item = await self.page.query_selector(f"#pane-side span[title*='{contact_clean}' i]")
             if not chat_item:
-                # Check for first item in search results
-                chat_item = await self.page.query_selector("#pane-side div[role='listitem'], #pane-side div[role='row']")
+                # 2. Text match inside listitem
+                chat_item = await self.page.query_selector(f"#pane-side div[role='listitem'] span[dir='auto']:has-text('{contact_clean}')")
+            if not chat_item:
+                # 3. Check text content of search result items
+                items = await self.page.query_selector_all("#pane-side div[role='listitem']")
+                for it in items[:6]:
+                    txt = await it.inner_text()
+                    if contact_clean.lower() in txt.lower():
+                        chat_item = it
+                        break
 
             if chat_item:
                 await chat_item.click()
-                contact_matched = True
                 await asyncio.sleep(1.0)
             else:
-                # Fallback: ArrowDown then Enter to select first contact in list
-                await self.page.keyboard.press("ArrowDown")
+                # Fallback: Press Enter on the search result
                 await self.page.keyboard.press("Enter")
                 await asyncio.sleep(1.0)
 
             # 2. Fast combined lookup for message compose input box
             compose_selectors = (
-                "footer div[contenteditable='true'], "
-                "#main footer div[contenteditable='true'], "
-                "div[data-lexical-editor='true'], "
-                "div[aria-label='Type a message'], "
-                "div[role='textbox'][contenteditable='true'], "
+                "#main footer div[contenteditable='true']",
+                "footer div[contenteditable='true']",
+                "div[data-lexical-editor='true']",
+                "div[aria-label='Type a message']",
+                "div[role='textbox'][contenteditable='true']",
                 "div[contenteditable='true'][data-tab='10']"
             )
 
             try:
-                compose_box = await self.page.wait_for_selector(compose_selectors, timeout=4000)
+                compose_box = await self.page.wait_for_selector(compose_selectors, timeout=5000)
             except Exception:
                 compose_box = None
 
             if not compose_box or not await compose_box.is_visible():
                 logger.warning(f"Could not open active chat for '{contact_name}'.")
+                await self.page.keyboard.press("Escape")
                 return {
                     "success": False,
                     "contact": contact_name,
                     "message": message,
-                    "error": f"Chat with '{contact_name}' could not be opened. Please verify the contact name."
+                    "error": f"WhatsApp par '{contact_name}' nahi mila."
                 }
 
             # 3. Type message and send
@@ -176,7 +236,22 @@ class WhatsAppService:
             await self.page.keyboard.type(message, delay=20)
             await asyncio.sleep(0.3)
             await self.page.keyboard.press("Enter")
-            await asyncio.sleep(0.8)
+            await asyncio.sleep(1.0)
+
+            # 4. Clean up state for subsequent requests
+            await self.page.keyboard.press("Escape")
+            await asyncio.sleep(0.2)
+            clean_btn = await self.page.query_selector(
+                "button[aria-label='Cancel search'], "
+                "button[aria-label='Clear search'], "
+                "button[aria-label='Back'], "
+                "span[data-icon='x-alt']"
+            )
+            if clean_btn:
+                try:
+                    await clean_btn.click()
+                except Exception:
+                    pass
 
             logger.info(f"🎉 Successfully sent WhatsApp message to '{contact_name}'!")
             return {

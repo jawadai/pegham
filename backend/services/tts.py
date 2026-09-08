@@ -38,7 +38,15 @@ class TTSService:
         if not clean_text:
             clean_text = text.strip()
 
-        candidate_voices = [self.voice, "ur-PK-AsadNeural", "en-US-JennyNeural"]
+        # Check if text contains Urdu script characters
+        has_urdu_script = bool(re.search(r'[\u0600-\u06FF]', clean_text))
+        if has_urdu_script:
+            # Native Pakistani Urdu neural voices
+            candidate_voices = ["ur-PK-UzmaNeural", "ur-PK-AsadNeural", "ur-IN-GulNeural"]
+        else:
+            # Authentic bilingual South Asian voices for Roman Urdu & English
+            candidate_voices = ["en-IN-NeerjaNeural", "en-IN-PrabhatNeural", self.voice]
+
         for voice_name in candidate_voices:
             try:
                 communicate = edge_tts.Communicate(text=clean_text, voice=voice_name)

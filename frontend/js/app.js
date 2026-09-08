@@ -68,20 +68,41 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  let currentAudio = null;
+  let lastSpokenText = "";
+  let lastSpokenTime = 0;
+
   // Stream & play synthesized Urdu voice audio (Free Edge-TTS)
   function playSpokenAudio(text) {
     if (!text) return;
+    const now = Date.now();
+    // Prevent duplicate triggers for the same phrase within 3.5s
+    if (text === lastSpokenText && (now - lastSpokenTime) < 3500) {
+      return;
+    }
+    lastSpokenText = text;
+    lastSpokenTime = now;
+
+    if (currentAudio) {
+      try {
+        currentAudio.pause();
+      } catch (e) {}
+      currentAudio = null;
+    }
+
     setOrbState("speaking");
     const audioUrl = `/api/tts?text=${encodeURIComponent(text)}`;
-    const audio = new Audio(audioUrl);
-    audio.onended = () => {
+    currentAudio = new Audio(audioUrl);
+    currentAudio.onended = () => {
+      currentAudio = null;
       setOrbState("idle");
     };
-    audio.onerror = (e) => {
+    currentAudio.onerror = (e) => {
       console.warn("Audio playback interrupted or failed:", e);
+      currentAudio = null;
       setOrbState("idle");
     };
-    audio.play().catch(err => {
+    currentAudio.play().catch(err => {
       console.warn("Audio autoplay blocked by browser:", err);
       setOrbState("idle");
     });

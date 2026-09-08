@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     # LLM & Conversational Brain (Defaults to 100% Free Groq Llama 3.3 70B)
     LLM_PROVIDER: str = "groq"  # Options: "groq", "ollama", "openai", "anthropic"
     GROQ_API_KEY: str = ""
-    GROQ_LLM_MODEL: str = "llama-3.1-8b-instant"
+    GROQ_LLM_MODEL: str = "openai/gpt-oss-20b"
 
     # Optional / Alternative LLM Providers
     OPENAI_API_KEY: str = ""
