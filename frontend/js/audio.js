@@ -100,8 +100,8 @@ class AudioController {
   }
 
   async processVoice(audioBlob) {
-    if (!audioBlob || audioBlob.size < 1000) {
-      console.warn("Audio recording was too short or empty.");
+    if (!audioBlob || audioBlob.size < 50) {
+      console.warn("Audio recording was too short or empty:", audioBlob ? audioBlob.size : 0);
       return null;
     }
 

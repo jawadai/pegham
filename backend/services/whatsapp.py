@@ -226,9 +226,54 @@ class WhatsAppService:
                 return True
         return False
 
+    async def _is_main_chat_open(self) -> bool:
+        """
+        Checks whether an active chat window (#main) is currently open and visible.
+        """
+        if not self.page:
+            return False
+        try:
+            el = await self.page.query_selector("#main, div[data-testid='conversation-panel-wrapper']")
+            if el and await el.is_visible():
+                return True
+        except Exception:
+            pass
+        return False
+
+    async def _get_active_compose_box(self):
+        """
+        Finds and returns the active message input element inside WhatsApp Web.
+        """
+        if not self.page:
+            return None
+        selectors = [
+            "#main footer div[contenteditable='true']",
+            "#main div[data-lexical-editor='true']",
+            "#main div[aria-label='Type a message']",
+            "#main div[contenteditable='true'][data-tab='10']",
+            "#main footer div[role='textbox']",
+            "#main footer [contenteditable='true']",
+            "footer div[contenteditable='true']",
+            "div[data-lexical-editor='true']",
+            "footer div[role='textbox']",
+            "p.selectable-text.copyable-text"
+        ]
+        for s in selectors:
+            try:
+                el = await self.page.query_selector(s)
+                if el and await el.is_visible():
+                    return el
+            except Exception:
+                pass
+        # Fallback: wait up to 2 seconds for the first selector
+        try:
+            return await self.page.wait_for_selector(selectors[0], state="visible", timeout=2000)
+        except Exception:
+            return None
+
     async def send_message(self, contact_name: str, message: str) -> Dict[str, Any]:
         """
-        Searches for a contact/chat in WhatsApp Web and sends a message.
+        Searches for a contact/chat in WhatsApp Web and sends a message reliably.
         """
         if not self.is_ready or not self.page:
             ready = await self.initialize()
@@ -249,7 +294,7 @@ class WhatsAppService:
             contact_name = matched_real_name
         else:
             for key, real_val in self.contact_cache.items():
-                if (len(clean_target) >= 4 and clean_target in key) or (len(key) >= 4 and key in clean_target):
+                if (len(clean_target) >= 3 and clean_target in key) or (len(key) >= 3 and key in clean_target):
                     logger.info(f"🎯 Contact '{contact_name}' matched via fuzzy cache -> '{real_val}'")
                     contact_name = real_val
                     break
@@ -257,32 +302,19 @@ class WhatsAppService:
         logger.info(f"📨 Attempting to send WhatsApp message to '{contact_name}': \"{message}\"")
         try:
             chat_opened = False
-            compose_selectors = (
-                "#main footer div[contenteditable='true'], "
-                "#main div[data-lexical-editor='true'], "
-                "#main div[aria-label='Type a message'], "
-                "#main div[contenteditable='true'][data-tab='10'], "
-                "#main footer div[role='textbox'], "
-                "footer div[contenteditable='true'], "
-                "div[data-lexical-editor='true'], "
-                "footer div[role='textbox']"
-            )
-            if isinstance(compose_selectors, (list, tuple)):
-                compose_selectors = ", ".join(compose_selectors)
 
             # Check if target chat is already actively open in #main header
-            try:
-                active_chat_title = await self.page.evaluate("""() => {
-                    const el = document.querySelector("#main header span[title], #main header div[role='button'] span[title]");
-                    return el ? (el.getAttribute('title') || el.innerText || '') : '';
-                }""")
-                if active_chat_title and self._is_contact_match(contact_name, active_chat_title):
-                    logger.info(f"💬 Active chat is ALREADY open for '{contact_name}' ('{active_chat_title}'). Skipping search!")
-                    compose_box = await self.page.wait_for_selector(compose_selectors, timeout=2000)
-                    if compose_box and await compose_box.is_visible():
+            if await self._is_main_chat_open():
+                try:
+                    active_chat_title = await self.page.evaluate("""() => {
+                        const el = document.querySelector("#main header span[title], #main header div[role='button'] span[title]");
+                        return el ? (el.getAttribute('title') || el.innerText || '') : '';
+                    }""")
+                    if active_chat_title and self._is_contact_match(contact_name, active_chat_title):
+                        logger.info(f"💬 Active chat is ALREADY open for '{contact_name}' ('{active_chat_title}'). Skipping search!")
                         chat_opened = True
-            except Exception:
-                pass
+                except Exception:
+                    pass
 
             search_variations = self._get_contact_search_variations(contact_name)
 
@@ -306,11 +338,10 @@ class WhatsAppService:
                 if cancel_btn:
                     try:
                         await cancel_btn.click()
-                        await asyncio.sleep(0.3)
+                        await asyncio.sleep(0.2)
                     except Exception:
                         pass
 
-                # Locate search box
                 search_selectors = (
                     "div[contenteditable='true'][data-tab='3'], "
                     "div[aria-label='Search input text'], "
@@ -348,17 +379,17 @@ class WhatsAppService:
                         await asyncio.sleep(0.2)
 
                     # Type search query
-                    await self.page.keyboard.type(query_variant, delay=35)
+                    await self.page.keyboard.type(query_variant, delay=30)
                     await asyncio.sleep(1.2)
 
                     # Look for matching contact item in results
                     chat_item = None
                     items = await self.page.query_selector_all(
                         "div[aria-label='Search results.'] div[role='listitem'], "
+                        "div[aria-label='Search results.'] div[data-testid='cell-frame-container'], "
                         "#side div[role='listitem'], "
                         "#side div[role='row'], "
-                        "div[data-testid='cell-frame-container'], "
-                        "#pane-side div[role='listitem']"
+                        "div[data-testid='cell-frame-container']"
                     )
 
                     found_names = []
@@ -374,29 +405,33 @@ class WhatsAppService:
                     logger.info(f"Contacts/Chats found for '{query_variant}': {found_names}")
 
                     for it in items[:10]:
-                        txt = await it.inner_text()
-                        if self._is_contact_match(contact_name, txt) or any(self._is_contact_match(qv, txt) for qv in search_variations):
-                            chat_item = it
-                            logger.info(f"🎯 Matched contact item in WhatsApp: '{txt.splitlines()[0]}'")
-                            break
+                        try:
+                            txt = await it.inner_text()
+                            if self._is_contact_match(contact_name, txt) or any(self._is_contact_match(qv, txt) for qv in search_variations):
+                                chat_item = it
+                                logger.info(f"🎯 Matched contact item in WhatsApp: '{txt.splitlines()[0]}'")
+                                break
+                        except Exception:
+                            pass
 
                     if chat_item:
                         await chat_item.click()
                         await asyncio.sleep(1.0)
-                    elif items and len(items) == 1:
-                        # Single result returned, select it
-                        logger.info(f"Single result returned for '{query_variant}', selecting: '{found_names[0] if found_names else 'first'}'")
+                    elif items:
+                        # Top search result returned by WhatsApp for this query
+                        logger.info(f"Selecting top search result for '{query_variant}': '{found_names[0] if found_names else 'first'}'")
                         await items[0].click()
                         await asyncio.sleep(1.0)
 
-                    # Check if compose box is now active
-                    try:
-                        compose_box = await self.page.wait_for_selector(compose_selectors, timeout=3000)
-                        if compose_box and await compose_box.is_visible():
-                            chat_opened = True
-                            break
-                    except Exception:
-                        pass
+                    # Press Enter as native shortcut to open top search match
+                    if not await self._is_main_chat_open():
+                        await self.page.keyboard.press("Enter")
+                        await asyncio.sleep(1.0)
+
+                    # Check if main chat is now open
+                    if await self._is_main_chat_open():
+                        chat_opened = True
+                        break
 
                 # Fallback: Try "New chat" address book drawer if main search didn't open chat
                 if not chat_opened:
@@ -431,23 +466,16 @@ class WhatsAppService:
                                         await drawer_items[0].click()
                                         await asyncio.sleep(1.2)
 
-                                try:
-                                    compose_box = await self.page.wait_for_selector(compose_selectors, timeout=5000)
-                                    if compose_box and await compose_box.is_visible():
-                                        chat_opened = True
-                                except Exception:
-                                    compose_box = await self.page.query_selector(compose_selectors)
-                                    if compose_box and await compose_box.is_visible():
-                                        chat_opened = True
+                                if await self._is_main_chat_open():
+                                    chat_opened = True
                         except Exception as e:
                             logger.warning(f"New chat drawer attempt failed: {e}")
 
+            # Re-verify if chat is open
             if not chat_opened:
-                compose_box = await self.page.query_selector(compose_selectors)
-                if compose_box and await compose_box.is_visible():
-                    chat_opened = True
+                chat_opened = await self._is_main_chat_open()
 
-            if not chat_opened or not compose_box:
+            if not chat_opened:
                 logger.warning(f"Could not open active chat for '{contact_name}' after trying variations {search_variations}.")
                 await self.page.keyboard.press("Escape")
                 return {
@@ -457,30 +485,74 @@ class WhatsAppService:
                     "error": f"WhatsApp par '{contact_name}' nahi mila."
                 }
 
-            # 3. Type message and send
+            # 3. Locate active compose box
+            compose_box = await self._get_active_compose_box()
+            if not compose_box:
+                footer = await self.page.query_selector("#main footer")
+                if footer:
+                    await footer.click()
+                    await asyncio.sleep(0.2)
+                    compose_box = await self._get_active_compose_box()
+
+            if not compose_box:
+                logger.warning(f"Chat opened for '{contact_name}', but message compose input was not found.")
+                return {
+                    "success": False,
+                    "contact": contact_name,
+                    "message": message,
+                    "error": f"WhatsApp par '{contact_name}' ki chat khuli magar message input box nahi mila."
+                }
+
+            # Focus and click compose box
+            await compose_box.focus()
             await compose_box.click()
-            await asyncio.sleep(0.2)
+            await asyncio.sleep(0.15)
+
+            # Type message
             await self.page.keyboard.type(message, delay=20)
             await asyncio.sleep(0.3)
-            await self.page.keyboard.press("Enter")
-            await asyncio.sleep(1.0)
 
-            # 4. Clean up state for subsequent requests
-            await self.page.keyboard.press("Escape")
-            await asyncio.sleep(0.2)
-            clean_btn = await self.page.query_selector(
-                "button[aria-label='Cancel search'], "
-                "button[aria-label='Clear search'], "
-                "button[aria-label='Back'], "
-                "span[data-icon='x-alt']"
+            # Press Enter to send
+            await self.page.keyboard.press("Enter")
+            await asyncio.sleep(0.5)
+
+            # Also click Send button if still visible
+            send_btn = await self.page.query_selector(
+                "#main footer button[aria-label='Send'], "
+                "#main footer span[data-icon='send'], "
+                "footer button[aria-label='Send'], "
+                "button[aria-label='Send'], "
+                "span[data-icon='send']"
             )
-            if clean_btn:
+            if send_btn:
                 try:
-                    await clean_btn.click()
+                    await send_btn.click()
+                    await asyncio.sleep(0.5)
                 except Exception:
                     pass
 
-            # Update contact cache in background
+            # Clean up state
+            await self.page.keyboard.press("Escape")
+            await asyncio.sleep(0.1)
+
+            # Associate contact_name with active WhatsApp chat title in cache
+            try:
+                active_title = await self.page.evaluate("""() => {
+                    const el = document.querySelector("#main header span[title], #main header div[role='button'] span[title]");
+                    return el ? (el.getAttribute('title') || el.innerText || '') : '';
+                }""")
+                if active_title:
+                    clean_spoken = re.sub(r'[^a-z0-9]', '', contact_name.lower())
+                    clean_active = re.sub(r'[^a-z0-9]', '', active_title.lower())
+                    if clean_spoken:
+                        self.contact_cache[clean_spoken] = active_title
+                    if clean_active:
+                        self.contact_cache[clean_active] = active_title
+                    logger.info(f"Associated in cache: '{contact_name}' -> '{active_title}'")
+            except Exception:
+                pass
+
+            # Refresh contact cache in background
             try:
                 asyncio.create_task(self.refresh_contact_cache())
             except Exception:

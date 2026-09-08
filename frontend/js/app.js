@@ -182,7 +182,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       const audioBlob = await window.audioController.stopRecording();
-      if (!audioBlob || audioBlob.size < 100) {
+      if (!audioBlob || audioBlob.size < 50) {
         console.warn("Audio recording empty or too small:", audioBlob ? audioBlob.size : 0);
         transcriptText.textContent = "Audio too brief. Please tap or hold spacebar, speak, then tap again.";
         setOrbState("idle");

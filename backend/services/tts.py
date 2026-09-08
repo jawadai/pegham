@@ -41,11 +41,11 @@ class TTSService:
         # Check if text contains Urdu script characters
         has_urdu_script = bool(re.search(r'[\u0600-\u06FF]', clean_text))
         if has_urdu_script:
-            # Native Pakistani Urdu neural voices
-            candidate_voices = ["ur-PK-UzmaNeural", "ur-PK-AsadNeural", "ur-IN-GulNeural"]
+            # Native Pakistani Urdu neural voices with Roman Urdu fallback
+            candidate_voices = ["ur-PK-UzmaNeural", "ur-PK-AsadNeural", "ur-IN-GulNeural", "en-IN-NeerjaNeural"]
         else:
             # Authentic bilingual South Asian voices for Roman Urdu & English
-            candidate_voices = ["en-IN-NeerjaNeural", "en-IN-PrabhatNeural", self.voice]
+            candidate_voices = ["en-IN-NeerjaNeural", "en-IN-PrabhatNeural", "ur-PK-UzmaNeural", "en-US-JennyNeural"]
 
         for voice_name in candidate_voices:
             try:

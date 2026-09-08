@@ -137,6 +137,17 @@ async def process_voice_audio(request: Request):
             audio_bytes=audio_bytes,
             filename="audio.webm"
         )
+        if not transcript or not transcript.strip() or transcript.strip() in [".", "!", "?", "...", "you", "You", "Thank you."]:
+            spoken = "Maazrat, awaaz samajh nahi aayi. Dobara kahiye."
+            await broadcast_event({"type": "SPEAK", "text": spoken})
+            await broadcast_event({"type": "STATE_CHANGE", "state": "idle"})
+            return {
+                "transcript": "",
+                "spoken_response": spoken,
+                "action": None,
+                "audio_url": f"/api/tts?text={urllib.parse.quote(spoken)}"
+            }
+
         await broadcast_event({"type": "TRANSCRIPT", "text": transcript})
 
         # 2. Process instruction with Groq LLaMA 3.3 70B & execute tools
